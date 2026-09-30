@@ -8,6 +8,9 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   
+  <!-- SheetJS Library for Native Excel (.xlsx) Exporting -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
@@ -188,7 +191,7 @@
           <!-- 1.1 Trade Name (ชื่อทางการค้า / ชื่อนิติบุคคล) -->
           <div>
             <label class="block font-semibold text-slate-700 mb-1" id="label-trade-name">
-              ชื่อทางการค้า / ชื่อร้านค้า / ชื่อแพ / ฟาร์ม <span class="text-red-500">*</span>
+              ชื่อทางการค้า / ชื่อร้านค้า / ชื่อแพ / ฟาร์ม (บุคคลธรรมดา) <span class="text-red-500">*</span>
             </label>
             <input 
               type="text" 
@@ -216,7 +219,7 @@
           <!-- Secondary ID (Juristic Reg ID / SSO Account Number) -->
           <div id="wrapper-reg-id" class="hidden animate-in fade-in duration-200">
             <label class="block font-semibold text-slate-700 mb-1" id="label-reg-id">
-              เลขทะเบียนนิติบุคคล 13 หลัก / เลขที่บัญชีนายจ้าง สปส. <span class="text-blue-600">*</span>
+              เลขทะเบียนนิติบุคคล 13 หลัก / เลขที่บัญชีนายจ้าง สปส. <span class="text-blue-600 font-bold">*</span>
             </label>
             <input 
               type="text" 
@@ -432,7 +435,7 @@
               <span class="text-[10px] text-slate-400 mt-1">คน (รวมทุกคน)</span>
             </div>
 
-            <!-- 2. แรงงานต่างด้าว (ย้ายช่องมาต่อจากลูกจ้างทั้งหมด) -->
+            <!-- 2. แรงงานต่างด้าว -->
             <div class="bg-white p-2.5 rounded-2xl border border-slate-200 flex flex-col justify-between shadow-sm">
               <span class="text-[11px] font-bold text-teal-800 block mb-1">
                 แรงงานต่างด้าว
@@ -588,23 +591,23 @@
           </div>
 
           <!-- Relief Needs Dropdown -->
-        <div>
-          <label class="block font-semibold text-slate-700 mb-1">
-            สิ่งที่ต้องการขอรับการสนับสนุนเร่งด่วนจากหน่วยงานรัฐ:
-          </label>
-          <select 
-            id="quick-relief-need" 
-            class="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-800 font-semibold focus:outline-none focus:border-blue-600 shadow-sm cursor-pointer"
-          >
-            <option value="ไม่ต้องการความช่วยเหลือเร่งด่วน">ไม่ต้องการความช่วยเหลือเร่งด่วน (รายงานเพื่อเฝ้าระวัง)</option>
-            <option value="ขอหนังสือรับรองหยุดงานเหตุสุดวิสัย (ยื่นประกันสังคม ม.33)">ขอหนังสือรับรองหยุดงานเหตุสุดวิสัย (เพื่อยื่นขอเงินชดเชยว่างงาน ประกันสังคม ม.33 ทั้งหมดหรือบางส่วน)</option>
-            <option value="ต้องการคำปรึกษากฎหมายแรงงานกรณีเหตุสุดวิสัย">ต้องการคำปรึกษาข้อกฎหมายแรงงานกรณีเหตุสุดวิสัย / สิทธิประโยชน์ลูกจ้าง</option>
-            <option value="ต้องการถุงยังชีพ/อาหารและน้ำดื่มให้ลูกจ้าง">ต้องการถุงยังชีพ / อาหารและน้ำดื่มสะอาดให้ลูกจ้าง</option>
-            <option value="ต้องการเรือท้องแบน/รถยกสูงรับส่งลูกจ้าง">ต้องการเรือท้องแบน / รถยกสูงรับส่งลูกจ้างที่ติดค้าง</option>
-            <option value="ต้องการสุขาเคลื่อนที่/เวชภัณฑ์ยา">ต้องการสุขาเคลื่อนที่ / ยารักษาโรคน้ำกัดเท้า</option>
-            <option value="ต้องการสินเชื่อฟื้นฟูกองทุนความปลอดภัยฯ">ต้องการสินเชื่อฟื้นฟูกองทุนความปลอดภัยฯ / สินเชื่อดอกเบี้ยต่ำภาครัฐ</option>
-          </select>
-        </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">
+              สิ่งที่ต้องการขอรับการสนับสนุนเร่งด่วนจากหน่วยงานรัฐ:
+            </label>
+            <select 
+              id="quick-relief-need" 
+              class="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-800 font-semibold focus:outline-none focus:border-blue-600 shadow-sm cursor-pointer"
+            >
+              <option value="ไม่ต้องการความช่วยเหลือเร่งด่วน">ไม่ต้องการความช่วยเหลือเร่งด่วน (รายงานเพื่อเฝ้าระวัง)</option>
+              <option value="ขอหนังสือรับรองหยุดงานเหตุสุดวิสัย (ยื่นประกันสังคม ม.33)">ขอหนังสือรับรองหยุดงานเหตุสุดวิสัย (เพื่อยื่นขอเงินชดเชยว่างงาน ประกันสังคม ม.33 ทั้งหมดหรือบางส่วน)</option>
+              <option value="ต้องการคำปรึกษากฎหมายแรงงานกรณีเหตุสุดวิสัย">ต้องการคำปรึกษาข้อกฎหมายแรงงานกรณีเหตุสุดวิสัย / สิทธิประโยชน์ลูกจ้าง</option>
+              <option value="ต้องการถุงยังชีพ/อาหารและน้ำดื่มให้ลูกจ้าง">ต้องการถุงยังชีพ / อาหารและน้ำดื่มสะอาดให้ลูกจ้าง</option>
+              <option value="ต้องการเรือท้องแบน/รถยกสูงรับส่งลูกจ้าง">ต้องการเรือท้องแบน / รถยกสูงรับส่งลูกจ้างที่ติดค้าง</option>
+              <option value="ต้องการสุขาเคลื่อนที่/เวชภัณฑ์ยา">ต้องการสุขาเคลื่อนที่ / ยารักษาโรคน้ำกัดเท้า</option>
+              <option value="ต้องการสินเชื่อฟื้นฟูกองทุนความปลอดภัยฯ">ต้องการสินเชื่อฟื้นฟูกองทุนความปลอดภัยฯ / สินเชื่อดอกเบี้ยต่ำภาครัฐ</option>
+            </select>
+          </div>
         </div>
 
         <!-- Submit Button -->
@@ -658,7 +661,7 @@
     <!-- ================================================================= -->
     <div id="portal-officer" class="hidden space-y-6">
       
-      <!-- Officer Alert Banner & CSV / Print / Logo Upload Actions -->
+      <!-- Officer Alert Banner & CSV / Excel / Print / Logo Upload / Clear Actions -->
       <div class="bg-gradient-to-r from-blue-900 via-indigo-950 to-slate-900 rounded-3xl p-5 text-white shadow-xl border border-blue-800/80 flex flex-col md:flex-row items-center justify-between gap-4 no-print">
         <div class="flex items-center gap-3.5">
           <div class="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-amber-300 text-2xl shrink-0">
@@ -688,21 +691,45 @@
           >
             <span>🖼️ โลโก้หน่วยงาน</span>
           </button>
+          
+          <!-- Clear Test Data Button -->
+          <button 
+            type="button" 
+            onclick="openClearDataModal()" 
+            class="bg-rose-700 hover:bg-rose-600 text-white font-bold py-2.5 px-3.5 rounded-xl text-xs flex items-center gap-1.5 shadow transition-all cursor-pointer border border-rose-500/40"
+            title="ล้างข้อมูลรายงานทดสอบทั้งหมดเพื่อเริ่มใช้งานจริง"
+          >
+            <span>🗑️ ล้างข้อมูลทดสอบ</span>
+          </button>
+
+          <!-- Export to Excel (.xlsx) Button -->
+          <button 
+            type="button" 
+            onclick="exportToExcel()" 
+            class="bg-emerald-700 hover:bg-emerald-600 active:bg-emerald-800 text-white font-bold py-2.5 px-3.5 rounded-xl text-xs flex items-center gap-1.5 shadow-lg transition-all cursor-pointer border border-emerald-500/50"
+            title="ส่งออกเป็นไฟล์ Microsoft Excel (.xlsx) จัดระเบียบคอลัมน์และหัวตารางอัตโนมัติ"
+          >
+            <span>📊 ส่งออก Excel (.xlsx)</span>
+          </button>
+
+          <!-- Export to CSV Button -->
           <button 
             type="button" 
             onclick="exportToCSV()" 
-            class="bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-xl text-xs flex items-center gap-2 shadow-lg transition-all cursor-pointer"
+            class="bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold py-2.5 px-3.5 rounded-xl text-xs flex items-center gap-1.5 shadow-lg transition-all cursor-pointer"
             title="ส่งออกไฟล์ข้อมูล CSV พร้อมฟิลด์มาตรฐานสำหรับส่งต่อกรมสวัสดิการฯ หรือ ศบก.จังหวัด"
           >
             <span>📥 ส่งออก CSV</span>
           </button>
+
           <button 
             type="button" 
             onclick="window.print()" 
-            class="bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 font-bold py-2.5 px-3.5 rounded-xl text-xs flex items-center gap-1.5 shadow transition-all cursor-pointer"
+            class="bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 font-bold py-2.5 px-3 rounded-xl text-xs flex items-center gap-1.5 shadow transition-all cursor-pointer"
           >
             <span>🖨️ พิมพ์ A4</span>
           </button>
+
           <!-- Officer Logout Button -->
           <button 
             type="button" 
@@ -731,7 +758,7 @@
         <!-- KPI 2: Total Workers -->
         <div class="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm flex flex-col justify-between print-shadow-none">
           <div class="flex items-center justify-between mb-2">
-            <span class="text-xs font-bold text-slate-500">ลูกจ้างประสบภัยรวม</span>
+            <span class="text-xs font-bold text-slate-500">ลูกจ้างเดือดร้อน/หยุดงาน</span>
             <span class="w-7 h-7 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-xs font-bold">👥</span>
           </div>
           <div>
@@ -897,7 +924,7 @@
                 <th class="p-3">ประเภทกิจการ</th>
                 <th class="p-3">ชื่อทางการค้า / เจ้าของ</th>
                 <th class="p-3">อำเภอ</th>
-                <th class="p-3 text-center">ลูกจ้างประสบภัย/หยุดงาน</th>
+                <th class="p-3 text-center">ลูกจ้างเดือดร้อน/หยุดงาน</th>
                 <th class="p-3 text-center">ความเสียหาย</th>
                 <th class="p-3">สภาพการทำงาน</th>
                 <th class="p-3">ขอความช่วยเหลือ</th>
@@ -926,6 +953,7 @@
       <span>แดชบอร์ดเจ้าหน้าที่ 🔒</span>
     </button>
   </div>
+
   <!-- PIN Protection Modal for Officer Dashboard (PIN: 01082475) -->
   <div id="officer-pin-modal" class="fixed inset-0 z-[100] bg-black/85 backdrop-blur-md hidden flex items-center justify-center p-4 no-print animate-in fade-in">
     <div class="bg-white rounded-3xl max-w-sm w-full p-6 text-center text-slate-800 shadow-2xl border border-slate-100 space-y-4">
@@ -968,6 +996,102 @@
         >
           ปลดล็อกแดชบอร์ด
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Clear / Reset Data Modal -->
+  <div id="clear-data-modal" class="fixed inset-0 z-[100] bg-black/85 backdrop-blur-md hidden flex items-center justify-center p-4 no-print animate-in fade-in">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 text-center text-slate-800 shadow-2xl border border-slate-100 space-y-4">
+      <div class="w-16 h-16 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center text-3xl mx-auto shadow-inner">
+        🗑️
+      </div>
+      <div>
+        <h3 class="font-extrabold text-lg text-slate-900">จัดการข้อมูลรายงานอุทกภัย</h3>
+        <p class="text-xs text-slate-500 mt-1">
+          ท่านสามารถล้างข้อมูลทดสอบทั้งหมดเพื่อเริ่มใช้งานหน้างานจริง หรือคืนค่าข้อมูลตัวอย่างเพื่อการสาธิต
+        </p>
+      </div>
+
+      <div class="bg-amber-50 p-3.5 rounded-2xl border border-amber-200 text-left text-xs space-y-1.5 text-amber-900">
+        <p class="font-bold flex items-center gap-1.5">
+          <span>⚠️ คำแนะนำก่อนเริ่มใช้งานจริง:</span>
+        </p>
+        <p>
+          เมื่อนำระบบไปเปิดรับรายงานจากผู้ประกอบการจริง แนะนำให้กด <strong>"ล้างข้อมูลทั้งหมด (เริ่มต้น 0 รายการ)"</strong> เพื่อให้ยอดสถิติ ตัวเลขลูกจ้าง และพิกัดแผนที่เริ่มนับจากข้อมูลหน้างานจริง
+        </p>
+      </div>
+
+      <div class="space-y-2 pt-1">
+        <button 
+          type="button" 
+          onclick="confirmClearAllData()" 
+          class="w-full bg-rose-600 hover:bg-rose-500 text-white font-bold py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 cursor-pointer shadow-md transition-all active:scale-98"
+        >
+          <span>🗑️ ยืนยันล้างข้อมูลทั้งหมด (เริ่มต้น 0 รายการ)</span>
+        </button>
+        
+        <button 
+          type="button" 
+          onclick="restoreSampleData()" 
+          class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 cursor-pointer transition-colors"
+        >
+          <span>🔄 คืนค่าข้อมูลตัวอย่าง (4 รายการสาธิต)</span>
+        </button>
+
+        <button 
+          type="button" 
+          onclick="closeClearDataModal()" 
+          class="w-full text-slate-400 hover:text-slate-600 font-semibold py-2 text-xs cursor-pointer"
+        >
+          ยกเลิก / ปิดหน้าต่าง
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Action / Detail Modal for Registry Entries -->
+  <div id="action-modal" class="fixed inset-0 z-[90] bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4 no-print animate-in fade-in">
+    <div class="bg-white rounded-3xl max-w-xl w-full p-6 text-slate-800 shadow-2xl border border-slate-100 space-y-4 max-h-[90vh] overflow-y-auto custom-scrollbar">
+      <div class="flex items-start justify-between pb-3 border-b border-slate-100">
+        <div>
+          <h3 id="modal-title" class="font-bold text-base text-blue-950"></h3>
+          <p id="modal-subtitle" class="text-xs text-slate-400 mt-0.5"></p>
+        </div>
+        <button onclick="closeActionModal()" class="text-slate-400 hover:text-slate-600 text-xl cursor-pointer p-1">✕</button>
+      </div>
+
+      <div id="modal-content" class="space-y-3 text-xs">
+        <!-- Dynamic details inserted by JS -->
+      </div>
+
+      <div class="pt-3 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-2">
+        <button 
+          type="button" 
+          onclick="deleteSingleActiveReport()" 
+          class="w-full sm:w-auto bg-rose-50 hover:bg-rose-100 border border-rose-300 text-rose-700 font-bold py-2.5 px-4 rounded-xl text-xs transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+          title="ลบรายการรายงานนี้ออกจากระบบ"
+        >
+          <span>🗑️ ลบรายงานนี้</span>
+        </button>
+
+        <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+          <button 
+            type="button" 
+            onclick="closeActionModal()" 
+            class="flex-1 sm:flex-initial bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 px-4 rounded-xl text-xs transition-colors cursor-pointer"
+          >
+            ปิด
+          </button>
+          <button 
+            type="button" 
+            id="modal-btn-toggle-status" 
+            onclick="toggleHelpDelivered()" 
+            class="flex-1 sm:flex-initial font-bold py-2.5 px-4 rounded-xl text-xs transition-colors cursor-pointer shadow"
+          >
+            ✓ ปรับสถานะ
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -1339,14 +1463,14 @@
 
     function initData() {
       const stored = localStorage.getItem('kanchanaburi_flood_reports_v4');
-      if (stored) {
+      if (stored !== null) {
         try {
           reports = JSON.parse(stored);
         } catch (e) {
-          reports = INITIAL_REPORTS;
+          reports = [...INITIAL_REPORTS];
         }
       } else {
-        reports = INITIAL_REPORTS;
+        reports = [...INITIAL_REPORTS];
         localStorage.setItem('kanchanaburi_flood_reports_v4', JSON.stringify(reports));
       }
 
@@ -1402,6 +1526,54 @@
       sessionStorage.removeItem('kanchanaburi_officer_authed');
       switchPortal('EMPLOYER');
       showToast('ล็อกหน้าจอสำเร็จ 🔒', 'ออกจากระบบแดชบอร์ดเจ้าหน้าที่เรียบร้อยแล้ว');
+    }
+
+    /* Clear / Reset Data Functions */
+    function openClearDataModal() {
+      document.getElementById('clear-data-modal').classList.remove('hidden');
+    }
+
+    function closeClearDataModal() {
+      document.getElementById('clear-data-modal').classList.add('hidden');
+    }
+
+    function confirmClearAllData() {
+      reports = [];
+      persistData();
+      closeClearDataModal();
+      updateOfficerKPIs();
+      initOrRefreshGisMap();
+      renderOfficerCharts();
+      renderRegistryTable();
+      showToast('ล้างข้อมูลสำเร็จ 🗑️', 'ล้างข้อมูลรายงานทดสอบทั้งหมดเรียบร้อยแล้ว พร้อมเริ่มใช้งานหน้างานจริง (0 รายการ)');
+    }
+
+    function restoreSampleData() {
+      reports = JSON.parse(JSON.stringify(INITIAL_REPORTS));
+      persistData();
+      closeClearDataModal();
+      updateOfficerKPIs();
+      initOrRefreshGisMap();
+      renderOfficerCharts();
+      renderRegistryTable();
+      showToast('คืนค่าสำเร็จ 🔄', 'โหลดข้อมูลตัวอย่าง 4 รายการสำหรับการสาธิตเรียบร้อยแล้ว');
+    }
+
+    function deleteSingleActiveReport() {
+      if (!selectedActiveReportId) return;
+      const target = reports.find(r => r.id === selectedActiveReportId);
+      const name = target ? (target.tradeName || target.companyName || target.id) : selectedActiveReportId;
+
+      if (!confirm(`ยืนยันการลบรายงาน "${name}" ออกจากระบบใช่หรือไม่?`)) return;
+
+      reports = reports.filter(r => r.id !== selectedActiveReportId);
+      persistData();
+      closeActionModal();
+      updateOfficerKPIs();
+      initOrRefreshGisMap();
+      renderOfficerCharts();
+      renderRegistryTable();
+      showToast('ลบรายการสำเร็จ 🗑️️', `ลบรายงานรหัส ${selectedActiveReportId} เรียบร้อยแล้ว`);
     }
 
     function renderNavbarLogo() {
@@ -1481,7 +1653,7 @@
           const compressed = canvas.toDataURL('image/png', 0.85);
           localStorage.setItem('kanchanaburi_agency_logo', compressed);
           renderNavbarLogo();
-          showToast('บันทึกโลโก้สำเร็จ! 🖼️', 'โลโก้หน่วยงานแสดงผลที่มุมบนซ้ายของทุกหน้าจอแล้ว');
+          showToast('บันทึกโลโก้สำเร็จ! 🖼️️', 'โลโก้หน่วยงานแสดงผลที่มุมบนซ้ายของทุกหน้าจอแล้ว');
         };
         img.src = e.target.result;
       };
@@ -1494,7 +1666,7 @@
       showToast('คืนค่าไอคอนเริ่มต้น 🌊', 'ใช้สัญลักษณ์คลื่นน้ำมาตรฐานของระบบ');
     }
 
-    // Single Consolidated & Error-Free setOwnerType function
+    // Set Owner Type Toggle (Individual vs Juristic)
     function setOwnerType(type) {
       const input = document.getElementById('quick-owner-type');
       const btnInd = document.getElementById('type-btn-individual');
@@ -1513,7 +1685,6 @@
       input.value = type;
 
       if (type === 'INDIVIDUAL') {
-        // Active Style: Individual (Emerald)
         btnInd.className = 'py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all bg-emerald-600 text-white shadow-md cursor-pointer';
         btnJur.className = 'py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all text-slate-600 hover:text-slate-900 cursor-pointer';
         
@@ -1532,7 +1703,6 @@
         if (inputReg) inputReg.required = false;
 
       } else {
-        // Active Style: Juristic (Blue)
         btnJur.className = 'py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all bg-blue-600 text-white shadow-md cursor-pointer';
         btnInd.className = 'py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all text-slate-600 hover:text-slate-900 cursor-pointer';
         
@@ -1573,7 +1743,6 @@
         return;
       }
 
-      // Clean prefix "ตำบล" or "ต." and trailing parenthesized district if picked from datalist
       let clean = rawVal.replace(/^ตำบล\s*|^ต\.\s*/i, '').trim();
       const parenMatch = clean.match(/^([^(]+)/);
       if (parenMatch) clean = parenMatch[1].trim();
@@ -1796,7 +1965,7 @@
         bizType,
         tradeName,
         ownerName,
-        companyName: tradeName, // Backward-compatible alias
+        companyName: tradeName,
         regId,
         district,
         subdistrict,
@@ -2050,8 +2219,6 @@
 
         const marker = L.marker([r.lat, r.lng], { icon: customIcon }).addTo(gisMap);
 
-        const totalWorkerImpacted = (parseInt(r.workersImpact, 10) || 0) + (parseInt(r.workersBizStop, 10) || 0);
-
         const popupContent = `
           <div class="text-xs space-y-1.5 p-1">
             <div class="flex items-center gap-1">
@@ -2096,7 +2263,7 @@
       });
 
       if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="11" class="p-8 text-center text-slate-400 font-medium">ไม่พบข้อมูลรายงานตามเงื่อนไขที่เลือก</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="11" class="p-8 text-center text-slate-400 font-medium">ไม่พบข้อมูลรายงานตามเงื่อนไขที่เลือก (หรือยังไม่มีข้อมูลรายงานในระบบ)</td></tr>`;
         return;
       }
 
@@ -2248,8 +2415,101 @@
         closeActionModal();
         renderRegistryTable();
         updateOfficerKPIs();
-        showToast('อัปเดตสถานะสำเร็จ 🔄', `${r.companyName}: ${r.status}`);
+        showToast('อัปเดตสถานะสำเร็จ 🔄', `${r.companyName || r.tradeName}: ${r.status}`);
       }
+    }
+
+    // Native Microsoft Excel (.xlsx) Exporter using SheetJS
+    function exportToExcel() {
+      if (reports.length === 0) {
+        showToast('ไม่มีข้อมูล ⚠️', 'ยังไม่มีรายการรายงานที่สามารถส่งออกได้');
+        return;
+      }
+
+      if (typeof XLSX === 'undefined') {
+        showToast('กำลังโหลดโมดูล ⚠️', 'ระบบกำลังโหลดโมดูล Excel กรุณาลองใหม่อีกครั้ง หรือใช้ปุ่ม CSV ชั่วคราว');
+        return;
+      }
+
+      const excelRows = reports.map((r, idx) => {
+        const damageVal = r.damageIsUnassessed ? 'ยังไม่ได้ประเมิน' : (r.damageEstimate || 0);
+        const totalImpacted = (parseInt(r.workersBizStop, 10) || 0) + (parseInt(r.workersImpact, 10) || 0);
+        const reportDate = new Date(r.timestamp);
+        const dateStr = `${reportDate.toLocaleDateString('th-TH')} ${reportDate.toLocaleTimeString('th-TH')}`;
+
+        return {
+          'ลำดับ': idx + 1,
+          'รหัสรายงาน': r.id,
+          'วัน/เวลาที่บันทึก': dateStr,
+          'รูปแบบสถานประกอบการ': r.ownerType === 'INDIVIDUAL' ? 'บุคคลธรรมดา' : 'นิติบุคคล',
+          'ประเภทกิจการ': r.bizType || 'ไม่ระบุ',
+          'ชื่อทางการค้า/ชื่อร้านค้า/ชื่อโรงงาน': r.tradeName || r.companyName || '-',
+          'ชื่อบุคคลเจ้าของ/ผู้แทนนิติบุคคล': r.ownerName || '-',
+          'เลขทะเบียนนิติบุคคล/สปส.': r.regId || '-',
+          'อำเภอ': r.district || '-',
+          'ตำบล/จุดสังเกต': r.subdistrict || '-',
+          'ละติจูด (Lat)': r.lat || '',
+          'ลองจิจูด (Lng)': r.lng || '',
+          'ผู้ประสานงานหน้างาน': r.contactName || '-',
+          'เบอร์โทรศัพท์ติดต่อ': r.contactPhone || '-',
+          'ลูกจ้างทั้งหมด (คน)': r.workersTotal || 0,
+          'แรงงานต่างด้าว (คน)': r.workersMigrant || 0,
+          'ลูกจ้างหยุดงาน สปก.ประสบภัย (คน)': r.workersBizStop || 0,
+          'ลูกจ้างเดือดร้อนหยุดงาน บ้านประสบภัย (คน)': r.workersImpact || 0,
+          'รวมลูกจ้างที่ได้รับผลกระทบ (คน)': totalImpacted,
+          'สภาพการดำเนินงาน': r.operationStatus || '-',
+          'ระดับน้ำท่วมเฉลี่ย (ซม.)': r.waterLevelCm || 0,
+          'ประเมินความเสียหาย (บาท)': damageVal,
+          'สิ่งที่ขอรับการสนับสนุนเร่งด่วน': r.reliefNeed || '-',
+          'สถานะการดำเนินการ': r.status === 'DELIVERED' ? 'ช่วยเหลือแล้ว' : 'รอดำเนินการ',
+          'จำนวนภาพถ่ายแนบ': (r.photos && r.photos.length > 0) ? `${r.photos.length} ภาพ` : 'ไม่มีภาพ',
+          'หน่วยงานผู้รับผิดชอบ': 'สำนักงานสวัสดิการและคุ้มครองแรงงาน จ.กาญจนบุรี'
+        };
+      });
+
+      // 1. Create worksheet from JSON data
+      const ws = XLSX.utils.json_to_sheet(excelRows);
+
+      // 2. Set auto column widths (wch) for great readability in Microsoft Excel
+      ws['!cols'] = [
+        { wch: 8 },  // ลำดับ
+        { wch: 14 }, // รหัสรายงาน
+        { wch: 22 }, // วัน/เวลาที่บันทึก
+        { wch: 20 }, // รูปแบบสถานประกอบการ
+        { wch: 32 }, // ประเภทกิจการ
+        { wch: 38 }, // ชื่อทางการค้า
+        { wch: 30 }, // ชื่อเจ้าของ/ผู้แทน
+        { wch: 26 }, // เลขทะเบียน
+        { wch: 18 }, // อำเภอ
+        { wch: 32 }, // ตำบล/จุดสังเกต
+        { wch: 16 }, // Lat
+        { wch: 16 }, // Lng
+        { wch: 26 }, // ผู้ประสานงาน
+        { wch: 18 }, // เบอร์ติดต่อ
+        { wch: 18 }, // ลูกจ้างทั้งหมด
+        { wch: 18 }, // แรงงานต่างด้าว
+        { wch: 30 }, // สปก.ประสบภัย
+        { wch: 32 }, // บ้านประสบภัย
+        { wch: 26 }, // รวมลูกจ้างเดือดร้อน
+        { wch: 36 }, // สภาพการดำเนินงาน
+        { wch: 22 }, // ระดับน้ำท่วม
+        { wch: 24 }, // ประเมินความเสียหาย
+        { wch: 40 }, // สิ่งที่ขอรับการสนับสนุน
+        { wch: 20 }, // สถานะ
+        { wch: 18 }, // ภาพถ่าย
+        { wch: 42 }  // หน่วยงานผู้รับผิดชอบ
+      ];
+
+      // 3. Create workbook and append sheet
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "รายงานอุทกภัย สสค.กาญจนบุรี");
+
+      // 4. Save and trigger native .xlsx download
+      const today = new Date().toISOString().slice(0, 10);
+      const fileName = `รายงานอุทกภัย_สสค_กาญจนบุรี_${today}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+
+      showToast('ส่งออก Excel สำเร็จ! 📊', `ดาวน์โหลดไฟล์ ${fileName} พร้อมเปิดใน Microsoft Excel แล้ว`);
     }
 
     function exportToCSV() {
@@ -2260,10 +2520,11 @@
       
       const csvEscape = (val) => `"${String(val ?? '').replace(/"/g, '""')}"`;
       
-      let csv = "\uFEFFลำดับ,รหัสรายงาน,วันที่บันทึก,รูปแบบสถานประกอบการ,ประเภทกิจการ,ชื่อทางการค้า/ชื่อร้านค้า/ชื่อโรงงาน,ชื่อบุคคลผู้เป็นเจ้าของ/ผู้แทนนิติบุคคล,เลขทะเบียนนิติบุคคล/ประกันสังคม,อำเภอ,ตำบล/จุดสังเกต,ละติจูด(Lat),ลองจิจูด(Lng),ชื่อผู้ประสานงานหน้างาน,เบอร์โทรศัพท์ติดต่อ,ลูกจ้างทั้งหมด(คน),แรงงานต่างด้าว(คน),ลูกจ้างหยุดงานเหตุสุดวิสัยสปก(คน),ลูกจ้างเดือดร้อนและหยุดงานบ้านประสพภัย(คน),สภาพการดำเนินงาน,ระดับน้ำท่วมขังเฉลี่ย(ซม.),ประเมินความเสียหาย(บาท),สิ่งที่ขอรับการสนับสนุนเร่งด่วน,สถานะการดำเนินการ,มีภาพถ่าย(ภาพ),หน่วยงานผู้รับผิดชอบ\n";
+      let csv = "\uFEFFลำดับ,รหัสรายงาน,วันที่บันทึก,รูปแบบสถานประกอบการ,ประเภทกิจการ,ชื่อทางการค้า/ชื่อร้านค้า/ชื่อโรงงาน,ชื่อบุคคลผู้เป็นเจ้าของ/ผู้แทนนิติบุคคล,เลขทะเบียนนิติบุคคล/ประกันสังคม,อำเภอ,ตำบล/จุดสังเกต,ละติจูด(Lat),ลองจิจูด(Lng),ชื่อผู้ประสานงานหน้างาน,เบอร์โทรศัพท์ติดต่อ,ลูกจ้างทั้งหมด(คน),แรงงานต่างด้าว(คน),ลูกจ้างหยุดงานเหตุสุดวิสัยสปก(คน),ลูกจ้างเดือดร้อนและหยุดงานบ้านประสพภัย(คน),รวมลูกจ้างเดือดร้อน(คน),สภาพการดำเนินงาน,ระดับน้ำท่วมขังเฉลี่ย(ซม.),ประเมินความเสียหาย(บาท),สิ่งที่ขอรับการสนับสนุนเร่งด่วน,สถานะการดำเนินการ,มีภาพถ่าย(ภาพ),หน่วยงานผู้รับผิดชอบ\n";
 
       reports.forEach((r, idx) => {
         const damageVal = r.damageIsUnassessed ? 'ยังไม่ได้ประเมิน' : (r.damageEstimate || 0);
+        const totalWorkerImpacted = (parseInt(r.workersImpact, 10) || 0) + (parseInt(r.workersBizStop, 10) || 0);
 
         csv += [
           idx + 1,
@@ -2284,6 +2545,7 @@
           r.workersMigrant || 0,
           r.workersBizStop || 0,
           r.workersImpact || 0,
+          totalWorkerImpacted,
           csvEscape(r.operationStatus),
           r.waterLevelCm || 0,
           csvEscape(damageVal),
@@ -2399,8 +2661,6 @@
         } else if (portalParam === 'EMPLOYER') {
           switchPortal('EMPLOYER');
         } else {
-          // On mobile & tablets, automatically guide users to fast Employer report form
-          // On desktop, if already authenticated as officer, open command dashboard
           if (detected === 'DESKTOP' && isOfficerAuthenticated) {
             switchPortal('OFFICER');
           } else {
