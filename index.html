@@ -1,0 +1,2435 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ระบบรายงานสถานการณ์อุทกภัยสถานประกอบกิจการและแรงงาน จ.กาญจนบุรี</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  
+  <style>
+    body { font-family: 'Prompt', sans-serif; -webkit-tap-highlight-color: transparent; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+    @media print {
+      body { background: white !important; color: black !important; }
+      .no-print { display: none !important; }
+      .print-only { display: block !important; }
+      .print-shadow-none { box-shadow: none !important; border: 1px solid #cbd5e1 !important; }
+    }
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+    #leaflet-map, #leaflet-picker-map { z-index: 10; border-radius: 1.25rem; }
+    .leaflet-popup-content-wrapper { border-radius: 1rem; font-family: 'Prompt', sans-serif; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2); }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col justify-between antialiased selection:bg-blue-600 selection:text-white pb-16 md:pb-6">
+
+  <nav class="bg-gradient-to-r from-blue-950 via-slate-900 to-indigo-950 text-white shadow-xl sticky top-0 z-50 no-print border-b border-blue-800/60">
+    <div class="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16 sm:h-20">
+        
+        <!-- Brand Identity -->
+        <div class="flex items-center gap-2.5 sm:gap-3 cursor-pointer" onclick="switchPortal('EMPLOYER')">
+          <div id="navbar-brand-logo-container" class="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center p-1.5 shadow-inner shrink-0 overflow-hidden">
+            <span id="navbar-brand-fallback-icon" class="text-xl sm:text-2xl">🌊</span>
+            <img id="navbar-brand-custom-logo" src="" alt="Agency Logo" class="w-full h-full object-contain hidden" />
+          </div>
+          <div>
+            <div class="flex items-center gap-1.5">
+              <span class="bg-blue-500/30 text-blue-200 border border-blue-400/40 text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                สสค. กาญจนบุรี
+              </span>
+              <span class="hidden sm:inline-flex items-center gap-1 text-[11px] text-emerald-400 font-medium">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                ศูนย์ช่วยเหลืออุทกภัย 24 ชม.
+              </span>
+              <!-- Auto-detected Device Mode Badge -->
+              <span id="device-mode-badge" class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+                📱 ตรวจสอบอุปกรณ์...
+              </span>
+            </div>
+            <h1 class="text-xs sm:text-base font-bold tracking-tight text-white truncate max-w-[200px] sm:max-w-none">
+              ระบบรายงานสถานการณ์อุทกภัยสถานประกอบการ
+            </h1>
+          </div>
+        </div>
+
+        <!-- Mode Switcher Buttons (Separating Employer vs Officer) -->
+        <div class="flex items-center gap-2">
+          <div class="bg-slate-800/90 p-1 rounded-2xl border border-slate-700/80 flex items-center shadow-inner text-xs font-bold">
+            <!-- Employer Tab -->
+            <button 
+              id="portal-btn-employer" 
+              onclick="switchPortal('EMPLOYER')" 
+              class="px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl transition-all flex items-center gap-1.5 bg-emerald-600 text-white shadow-md cursor-pointer"
+            >
+              <span>📱 สำหรับผู้ประกอบการ / ร้านค้า</span>
+            </button>
+            <!-- Officer Tab (Guarded by PIN 01082475) -->
+            <button 
+              id="portal-btn-officer" 
+              onclick="requestOfficerAccess()" 
+              class="px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl transition-all flex items-center gap-1.5 text-slate-300 hover:text-white cursor-pointer"
+            >
+              <span>📊 แดชบอร์ดเจ้าหน้าที่ 🔒</span>
+            </button>
+          </div>
+
+          <!-- QR Quick Share for Smartphone -->
+          <button 
+            type="button" 
+            onclick="openQrModal()" 
+            class="hidden md:flex bg-blue-600/30 hover:bg-blue-600 border border-blue-400/40 text-blue-200 hover:text-white px-3 py-2 rounded-xl text-xs font-bold items-center gap-1.5 shadow transition-all cursor-pointer"
+            title="สร้าง QR Code ให้ผู้ประกอบการสแกนรายงานผ่านมือถือ"
+          >
+            <span>📱 QR มือถือ</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </nav>
+
+  <main class="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 py-5 w-full flex-1">
+
+    <!-- ================================================================= -->
+    <!-- PORTAL 1: EMPLOYER & INDIVIDUAL BUSINESS REPORT (MOBILE QUICK FORM)-->
+    <!-- ================================================================= -->
+    <div id="portal-employer" class="max-w-2xl mx-auto space-y-4">
+      
+      <!-- Streamlined Header Card -->
+      <div class="bg-gradient-to-br from-emerald-800 via-teal-900 to-slate-900 rounded-3xl p-5 sm:p-6 text-white shadow-xl border border-emerald-700/50">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-[11px] font-bold border border-emerald-400/30 mb-2">
+              <span>⚡ แจ้งเหตุด่วนใน 1 นาที (รองรับมือถือ/แท็บเล็ต/PC)</span>
+            </div>
+            <h2 class="text-lg sm:text-2xl font-bold tracking-tight text-white leading-snug">
+              แจ้งผลกระทบอุทกภัยต่อสถานประกอบกิจการ
+            </h2>
+            <p class="text-xs sm:text-sm text-emerald-100/90 mt-1 leading-relaxed">
+              สำนักงานสวัสดิการและคุ้มครองแรงงาน จังหวัดกาญจนบุรี (สสค.กาญจนบุรี)<br class="hidden sm:inline">
+              เพื่อสำรวจความต้องการช่วยเหลือของสถานประกอบกิจการและดูแลสิทธิประโยชน์ด้านแรงงาน
+            </p>
+          </div>
+          <div class="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-2xl shrink-0 border border-white/20">
+            🆘
+          </div>
+        </div>
+      </div>
+
+      <!-- Legal Guidance Card: Force Majeure vs Section 75 -->
+      <div class="bg-gradient-to-r from-amber-500/10 via-blue-500/10 to-indigo-500/10 rounded-2xl p-4 border border-amber-300/80 shadow-sm text-xs space-y-2">
+        <div class="flex items-center gap-2 text-amber-900 font-bold text-sm">
+          <span>⚖️ ข้อควรรู้ทางกฎหมายแรงงาน: การหยุดงานจากภัยธรรมชาติ (เหตุสุดวิสัยทั้งหมด / บางส่วน)</span>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-slate-700 leading-relaxed">
+          <div class="bg-white/80 p-2.5 rounded-xl border border-amber-200">
+            <strong class="text-amber-900 block mb-0.5">1. สิทธินายจ้าง (เหตุสุดวิสัย):</strong>
+            น้ำท่วมเป็นเหตุสุดวิสัยตาม ป.พ.พ. สัญญาจ้างระงับชั่วคราวตามหลัก "ไม่มีงาน ไม่มีค่าจ้าง" นายจ้างสั่งหยุดงานได้ทันที <strong>ไม่ต้องจ่ายค่าจ้าง 75%</strong> และไม่ต้องแจ้งล่วงหน้า 3 วัน
+          </div>
+          <div class="bg-white/80 p-2.5 rounded-xl border border-teal-200">
+            <strong class="text-teal-900 block mb-0.5">2. หยุดบางส่วน (กฎหมายรองรับ):</strong>
+            หากน้ำท่วมเฉพาะบางแผนก/อาคาร นายจ้างสั่งหยุดเฉพาะส่วนได้ตาม ป.พ.พ. ม.219 (พ้นวิสัยบางส่วน) และกฎกระทรวง สปส. ม.79/1 รองรับทั้ง <strong>หยุดทั้งหมดหรือบางส่วน</strong>
+          </div>
+          <div class="bg-white/80 p-2.5 rounded-xl border border-blue-200">
+            <strong class="text-blue-900 block mb-0.5">3. สิทธิลูกจ้าง (สปส. ม.33):</strong>
+            ลูกจ้างส่วนที่ถูกสั่งหยุดงานและไม่ได้รับค่าจ้าง มีสิทธิขอรับเงินชดเชยว่างงานเหตุสุดวิสัย <strong>50% ของค่าจ้าง</strong> โดยนายจ้างออกหนังสือรับรองการหยุดงานประกอบการยื่น
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Submission Form -->
+      <form id="quick-flood-form" onsubmit="handleQuickFormSubmit(event)" class="bg-white rounded-3xl border border-slate-200 shadow-xl p-4 sm:p-6 space-y-4 text-xs sm:text-sm">
+        
+        <!-- SECTION 1: ESTABLISHMENT IDENTITY (JURISTIC VS INDIVIDUAL) -->
+        <div class="space-y-3 bg-slate-50/80 p-3.5 sm:p-4 rounded-2xl border border-slate-200">
+          <div class="flex items-center justify-between">
+            <label class="block font-bold text-slate-800 text-sm flex items-center gap-1.5">
+              <span>🏢 1. รูปแบบและชื่อสถานประกอบกิจการ</span>
+              <span class="text-red-500">*</span>
+            </label>
+            <span id="badge-owner-type" class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+              บุคคลธรรมดา
+            </span>
+          </div>
+
+          <!-- Toggle: Juristic Person vs Individual -->
+          <div class="grid grid-cols-2 gap-2 p-1 bg-slate-200/80 rounded-2xl">
+            <button 
+              type="button" 
+              id="type-btn-individual" 
+              onclick="setOwnerType('INDIVIDUAL')" 
+              class="py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all bg-emerald-600 text-white shadow-md cursor-pointer"
+            >
+              <span>👤 บุคคลธรรมดา / ร้านค้า / แพ / ฟาร์ม</span>
+            </button>
+            <button 
+              type="button" 
+              id="type-btn-juristic" 
+              onclick="setOwnerType('JURISTIC')" 
+              class="py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all text-slate-600 hover:text-slate-900 cursor-pointer"
+            >
+              <span>🏢 นิติบุคคล (บจก. / หจก. / บมจ.)</span>
+            </button>
+          </div>
+
+          <input type="hidden" id="quick-owner-type" value="INDIVIDUAL">
+
+          <!-- 1.1 Trade Name (ชื่อทางการค้า / ชื่อนิติบุคคล) -->
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1" id="label-trade-name">
+              ชื่อทางการค้า / ชื่อร้านค้า / ชื่อแพ / ฟาร์ม <span class="text-red-500">*</span>
+            </label>
+            <input 
+              type="text" 
+              id="quick-trade-name" 
+              required 
+              placeholder="เช่น ร้านค้าตัวอย่าง, แพอาหารริมน้ำสมมุติ, ไร่เกษตรตัวอย่าง (สปก.สมมุติ)" 
+              class="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-800 font-semibold focus:outline-none focus:border-blue-600 shadow-sm transition-all"
+            />
+          </div>
+
+          <!-- 1.2 Owner Name (ชื่อบุคคลผู้เป็นเจ้าของ / ผู้แทนนิติบุคคล) -->
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1" id="label-owner-name">
+              ชื่อ-นามสกุล บุคคลผู้เป็นเจ้าของกิจการ / นายจ้าง <span class="text-red-500">*</span>
+            </label>
+            <input 
+              type="text" 
+              id="quick-owner-name" 
+              required 
+              placeholder="เช่น นายสมมุติ มั่นคงดี, นางตัวอย่าง สดใสยิ่ง" 
+              class="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-800 font-semibold focus:outline-none focus:border-blue-600 shadow-sm transition-all"
+            />
+          </div>
+
+          <!-- Secondary ID (Juristic Reg ID / SSO Account Number) -->
+          <div id="wrapper-reg-id" class="hidden animate-in fade-in duration-200">
+            <label class="block font-semibold text-slate-700 mb-1" id="label-reg-id">
+              เลขทะเบียนนิติบุคคล 13 หลัก / เลขที่บัญชีนายจ้าง สปส. <span class="text-blue-600">*</span>
+            </label>
+            <input 
+              type="text" 
+              id="quick-reg-id" 
+              placeholder="เช่น 0710000000000 หรือ เลขบัญชีนายจ้าง สปส. 10 หลัก (ตัวอย่าง)" 
+              class="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-800 font-mono shadow-sm focus:border-blue-600"
+            />
+          </div>
+
+          <!-- Business Category / Industry Sector -->
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">
+              ประเภทกิจการ / กลุ่มธุรกิจ <span class="text-red-500">*</span>
+            </label>
+            <select 
+              id="quick-biz-type" 
+              required
+              class="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-800 font-semibold focus:outline-none focus:border-blue-600 shadow-sm cursor-pointer"
+            >
+              <option value="">-- แตะเลือกประเภทกิจการ --</option>
+              <option value="แพอาหาร / แพท่องเที่ยว / ร้านอาหารริมน้ำ">แพอาหาร / แพท่องเที่ยว / ร้านอาหารริมน้ำ</option>
+              <option value="โรงแรม / รีสอร์ต / โฮมสเตย์ / ที่พักเชิงธรรมชาติ">โรงแรม / รีสอร์ต / โฮมสเตย์ / ที่พักเชิงธรรมชาติ</option>
+              <option value="โรงงานแปรรูปเกษตร / น้ำตาล / อาหารและเครื่องดื่ม">โรงงานแปรรูปเกษตร / น้ำตาล / อาหารและเครื่องดื่ม</option>
+              <option value="โรงงานกระดาษ / เยื่อกระดาษ / บรรจุภัณฑ์ / พลาสติก">โรงงานกระดาษ / เยื่อกระดาษ / บรรจุภัณฑ์ / พลาสติก</option>
+              <option value="โรงงานผลิตชิ้นส่วน / สิ่งทอ / วัสดุก่อสร้าง / เหมืองแร่">โรงงานผลิตชิ้นส่วน / สิ่งทอ / วัสดุก่อสร้าง / เหมืองแร่</option>
+              <option value="กสิกรรม / ฟาร์มเลี้ยงสัตว์ / พืชไร่ / ประมง">กสิกรรม / ฟาร์มเลี้ยงสัตว์ / พืชไร่ / ประมง</option>
+              <option value="ค้าปลีก / ค้าส่ง / ห้างร้าน / ตลาดสด / ซูเปอร์มาร์เก็ต">ค้าปลีก / ค้าส่ง / ห้างร้าน / ตลาดสด / ซูเปอร์มาร์เก็ต</option>
+              <option value="ขนส่ง / โลจิสติกส์ / คลังสินค้า / อู่ซ่อมยานยนต์">ขนส่ง / โลจิสติกส์ / คลังสินค้า / อู่ซ่อมยานยนต์</option>
+              <option value="ธุรกิจบริการ / สปา / สันทนาการ / คลินิก / สถานศึกษา">ธุรกิจบริการ / สปา / สันทนาการ / คลินิก / สถานศึกษา</option>
+              <option value="กิจการและบริการอื่นๆ">กิจการและบริการอื่นๆ</option>
+            </select>
+          </div>
+
+          <!-- Location: Subdistrict (Auto-selects District and Province) -->
+          <div class="space-y-2.5">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <div class="flex items-center justify-between mb-1">
+                  <label class="block font-semibold text-slate-700">
+                    ตำบล (ใน จ.กาญจนบุรี) <span class="text-red-500">*</span>
+                  </label>
+                  <span class="text-[10px] text-blue-600 font-bold">พิมพ์หรือเลือก</span>
+                </div>
+                <input 
+                  type="text" 
+                  id="quick-subdistrict" 
+                  list="kanchanaburi-subdistricts-list"
+                  required 
+                  autocomplete="off"
+                  oninput="handleSubdistrictInput(this.value)"
+                  onchange="handleSubdistrictInput(this.value)"
+                  placeholder="เช่น ปากแพรก, ท่าขนุน, ลาดหญ้า..." 
+                  class="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-800 font-semibold focus:outline-none focus:border-blue-600 shadow-sm transition-all"
+                />
+                <datalist id="kanchanaburi-subdistricts-list">
+                  <!-- Auto-populated via JS -->
+                </datalist>
+              </div>
+
+              <div>
+                <div class="flex items-center justify-between mb-1">
+                  <label class="block font-semibold text-slate-700">
+                    อำเภอ <span class="text-red-500">*</span>
+                  </label>
+                  <span id="badge-auto-district" class="text-[10px] text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded font-bold hidden">
+                    เลือกอัตโนมัติ ✓
+                  </span>
+                </div>
+                <select 
+                  id="quick-district" 
+                  required 
+                  onchange="updateQuickCoordsByDistrict(this.value)"
+                  class="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-800 font-bold focus:outline-none focus:border-blue-600 shadow-sm cursor-pointer"
+                >
+                  <option value="">-- รอระบุตำบล / เลือกอำเภอ --</option>
+                  <option value="เมืองกาญจนบุรี">อำเภอเมืองกาญจนบุรี</option>
+                  <option value="ไทรโยค">อำเภอไทรโยค</option>
+                  <option value="ท่าม่วง">อำเภอท่าม่วง</option>
+                  <option value="ท่ามะกา">อำเภอท่ามะกา</option>
+                  <option value="ทองผาภูมิ">อำเภอทองผาภูมิ</option>
+                  <option value="สังขละบุรี">อำเภอสังขละบุรี</option>
+                  <option value="ด่านมะขามเตี้ย">อำเภอด่านมะขามเตี้ย</option>
+                  <option value="บ่อพลอย">อำเภอบ่อพลอย</option>
+                  <option value="ศรีสวัสดิ์">อำเภอศรีสวัสดิ์</option>
+                  <option value="พนมทวน">อำเภอพนมทวน</option>
+                  <option value="เลาขวัญ">อำเภอเลาขวัญ</option>
+                  <option value="หนองปรือ">อำเภอหนองปรือ</option>
+                  <option value="ห้วยกระเจา">อำเภอห้วยกระเจา</option>
+                </select>
+              </div>
+
+              <div>
+                <div class="flex items-center justify-between mb-1">
+                  <label class="block font-semibold text-slate-700">
+                    จังหวัด <span class="text-red-500">*</span>
+                  </label>
+                  <span class="text-[10px] text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded font-bold">
+                    อัตโนมัติ ✓
+                  </span>
+                </div>
+                <input 
+                  type="text" 
+                  id="quick-province" 
+                  value="กาญจนบุรี" 
+                  readonly 
+                  class="w-full bg-slate-100 border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-800 font-bold shadow-sm cursor-not-allowed"
+                />
+              </div>
+            </div>
+
+            <!-- Detailed address / Landmark -->
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <label class="block font-semibold text-slate-700 text-xs">
+                  หมู่ที่ / ซอย / ถนน / จุดสังเกตใกล้เคียง
+                </label>
+                <span id="badge-auto-location-summary" class="text-[11px] text-blue-700 font-semibold hidden"></span>
+              </div>
+              <input 
+                type="text" 
+                id="quick-address-detail" 
+                placeholder="เช่น หมู่ 1 ใกล้สะพานข้ามแม่น้ำตัวอย่าง, ถนนแสงชูโต ซอย 8" 
+                class="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2 text-slate-800 shadow-sm text-xs"
+              />
+            </div>
+          </div>
+
+          <!-- GPS 1-Click Satellite Fetch -->
+          <div class="bg-blue-50/70 p-3 rounded-2xl border border-blue-200 space-y-2">
+            <div class="flex items-center justify-between gap-2">
+              <div>
+                <span class="font-bold text-blue-950 flex items-center gap-1">
+                  <span>📍 พิกัดแผนที่ฉุกเฉิน (GPS)</span>
+                </span>
+                <span id="quick-gps-status" class="text-[11px] text-blue-700 font-medium block">
+                  แตะปุ่มเพื่อดึงตำแหน่งอัตโนมัติจากมือถือ
+                </span>
+              </div>
+              <button 
+                type="button" 
+                onclick="acquireQuickGPS()" 
+                class="bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold py-2 px-3 rounded-xl text-xs flex items-center gap-1.5 shadow transition-all cursor-pointer shrink-0"
+              >
+                <span>🛰️ กดดึงพิกัดมือถือ</span>
+              </button>
+            </div>
+            <div class="grid grid-cols-2 gap-2 text-xs font-mono">
+              <input type="number" step="any" id="quick-lat" placeholder="ละติจูด (Lat)" class="bg-white border border-blue-300 rounded-xl px-2.5 py-1.5 text-slate-800 font-bold" />
+              <input type="number" step="any" id="quick-lng" placeholder="ลองจิจูด (Lng)" class="bg-white border border-blue-300 rounded-xl px-2.5 py-1.5 text-slate-800 font-bold" />
+            </div>
+          </div>
+
+          <!-- Contact Phone -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <label class="block font-semibold text-slate-700">
+                  ชื่อผู้ติดต่อ / ผู้แจ้ง <span class="text-red-500">*</span>
+                </label>
+                <button 
+                  type="button" 
+                  onclick="copyOwnerToContact()" 
+                  class="text-[11px] text-blue-600 hover:text-blue-800 font-medium underline cursor-pointer"
+                >
+                  ใช้ชื่อเดียวกับเจ้าของ
+                </button>
+              </div>
+              <input 
+                type="text" 
+                id="quick-contact-name" 
+                required 
+                placeholder="เช่น นายสมมุติ ประสานงานดี" 
+                class="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-800 shadow-sm"
+              />
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">
+                เบอร์โทรศัพท์มือถือติดต่อด่วน <span class="text-red-500">*</span>
+              </label>
+              <input 
+                type="tel" 
+                id="quick-contact-phone" 
+                required 
+                placeholder="08x-xxx-xxxx" 
+                class="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-800 font-mono font-bold text-base focus:border-blue-600 shadow-sm"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- SECTION 2: WORKER IMPACTS & OPERATION STATUS (COMPACT & SIMPLE) -->
+        <div class="space-y-3 bg-slate-50/80 p-3.5 sm:p-4 rounded-2xl border border-slate-200">
+          <label class="block font-bold text-slate-800 text-sm flex items-center gap-1.5">
+            <span>👥 2. ผลกระทบด้านแรงงานและสภาพการดำเนินงาน</span>
+            <span class="text-red-500">*</span>
+          </label>
+
+          <!-- 4-Box Grid: 1.ลูกจ้างทั้งหมด | 2.แรงงานต่างด้าว | 3.ลูกจ้างหยุดงาน(เหตุสุดวิสัย สปก.) | 4.ลูกจ้างเดือดร้อนและหยุดงาน(บ้านประสพภัย) -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-center">
+            <!-- 1. ลูกจ้างทั้งหมด -->
+            <div class="bg-white p-2.5 rounded-2xl border border-slate-200 flex flex-col justify-between shadow-sm">
+              <span class="text-[11px] font-bold text-slate-700 block mb-1">
+                ลูกจ้างทั้งหมด
+              </span>
+              <input 
+                type="number" 
+                id="quick-workers-total" 
+                required 
+                min="1" 
+                placeholder="เช่น 10" 
+                class="w-full font-mono font-extrabold text-blue-900 text-base text-center bg-slate-50 border border-slate-300 rounded-xl py-1.5 focus:border-blue-600 focus:bg-white"
+              />
+              <span class="text-[10px] text-slate-400 mt-1">คน (รวมทุกคน)</span>
+            </div>
+
+            <!-- 2. แรงงานต่างด้าว (ย้ายช่องมาต่อจากลูกจ้างทั้งหมด) -->
+            <div class="bg-white p-2.5 rounded-2xl border border-slate-200 flex flex-col justify-between shadow-sm">
+              <span class="text-[11px] font-bold text-teal-800 block mb-1">
+                แรงงานต่างด้าว
+              </span>
+              <input 
+                type="number" 
+                id="quick-workers-migrant" 
+                min="0" 
+                value="0" 
+                class="w-full font-mono font-extrabold text-teal-700 text-base text-center bg-slate-50 border border-slate-300 rounded-xl py-1.5 focus:border-teal-600 focus:bg-white"
+              />
+              <span class="text-[10px] text-slate-400 mt-1">คน (MOU/ม.64)</span>
+            </div>
+
+            <!-- 3. ลูกจ้างที่หยุดงาน (เนื่องจากเหตุสุดวิสัยของสถานประกอบกิจการ) -->
+            <div class="bg-white p-2.5 rounded-2xl border border-amber-200 bg-amber-50/20 flex flex-col justify-between shadow-sm">
+              <div>
+                <span class="text-[11px] font-bold text-amber-900 block leading-tight">
+                  ลูกจ้างที่หยุดงาน
+                </span>
+                <span class="text-[9px] text-amber-700 font-semibold block leading-tight mt-0.5">
+                  (เนื่องจากเหตุสุดวิสัยของสถานประกอบกิจการ)
+                </span>
+              </div>
+              <input 
+                type="number" 
+                id="quick-workers-biz-stop" 
+                min="0" 
+                value="0" 
+                placeholder="เช่น 0" 
+                class="w-full font-mono font-extrabold text-amber-700 text-base text-center bg-white border border-amber-300 rounded-xl py-1.5 mt-1 focus:border-amber-600"
+              />
+              <span class="text-[10px] text-amber-700/80 mt-1">คน (สปก.ประสบภัย)</span>
+            </div>
+
+            <!-- 4. ลูกจ้างเดือดร้อนและหยุดงาน (เนื่องจากบ้านประสพภัย) -->
+            <div class="bg-white p-2.5 rounded-2xl border border-red-200 bg-red-50/20 flex flex-col justify-between shadow-sm">
+              <div>
+                <span class="text-[11px] font-bold text-red-900 block leading-tight">
+                  ลูกจ้างเดือดร้อนและหยุดงาน
+                </span>
+                <span class="text-[9px] text-red-600 font-semibold block leading-tight mt-0.5">
+                  (เนื่องจากบ้านประสพภัย)
+                </span>
+              </div>
+              <input 
+                type="number" 
+                id="quick-workers-impact" 
+                required 
+                min="0" 
+                placeholder="เช่น 0" 
+                class="w-full font-mono font-extrabold text-red-600 text-base text-center bg-white border border-red-300 rounded-xl py-1.5 mt-1 focus:border-red-600"
+              />
+              <span class="text-[10px] text-red-700/80 mt-1">คน (ที่พัก/บ้านน้ำท่วม)</span>
+            </div>
+          </div>
+
+          <!-- Operation Status Radios -->
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="block font-semibold text-slate-700">
+                สภาพการดำเนินกิจการในปัจจุบัน:
+              </span>
+              <span class="text-[10px] text-amber-800 bg-amber-100/80 px-2 py-0.5 rounded-full font-bold border border-amber-300">
+                เหตุสุดวิสัย = No Work No Pay (ไม่ต้องจ่าย 75%)
+              </span>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+              <label class="flex items-center gap-2 p-3 rounded-2xl border bg-white border-slate-200 cursor-pointer hover:border-emerald-500 transition-colors">
+                <input type="radio" name="quick-op-status" value="เปิดทำงานตามปกติ" required class="text-emerald-600 w-4 h-4">
+                <span class="font-bold text-emerald-800">เปิดทำงานตามปกติ</span>
+              </label>
+
+              <label class="flex items-center gap-2 p-3 rounded-2xl border bg-amber-50/40 border-amber-200 cursor-pointer hover:border-amber-500 transition-colors">
+                <input type="radio" name="quick-op-status" value="หยุดงานบางส่วนจากเหตุสุดวิสัย (เฉพาะแผนก/พื้นที่ที่ประสบภัย)" class="text-amber-600 w-4 h-4">
+                <span class="font-bold text-amber-900">หยุดบางส่วน (เหตุสุดวิสัย)</span>
+              </label>
+
+              <label class="flex items-center gap-2 p-3 rounded-2xl border bg-red-50/50 border-red-200 cursor-pointer hover:border-red-500 transition-colors">
+                <input type="radio" name="quick-op-status" value="หยุดกิจการทั้งหมดชั่วคราวจากเหตุสุดวิสัย (ภัยธรรมชาติ)" class="text-red-600 w-4 h-4">
+                <span class="font-bold text-red-900">หยุดทั้งหมด (เหตุสุดวิสัย)</span>
+              </label>
+            </div>
+            <p class="text-[11px] text-slate-500 mt-1.5 leading-normal">
+              * กรณีหยุดงานจากเหตุสุดวิสัย (ไม่ว่าจะหยุดทั้งหมดหรือหยุดบางส่วน) ลูกจ้างส่วนที่ไม่ได้รับค่าจ้างมีสิทธิยื่นขอรับเงินชดเชยว่างงาน 50% จากกองทุนประกันสังคมได้ทันที (ม.79/1 พ.ร.บ.ประกันสังคม)
+            </p>
+          </div>
+
+          <!-- Water Level & Damage Estimation -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">
+                ระดับน้ำท่วมขัง (เซนติเมตร) (โดยเฉลี่ย)
+              </label>
+              <input 
+                type="number" 
+                id="quick-water-level" 
+                placeholder="เช่น 50" 
+                class="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-800 font-mono text-center shadow-sm"
+              />
+            </div>
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <label class="block font-semibold text-slate-700">
+                  ประเมินความเสียหาย (บาท)
+                </label>
+                <!-- Toggle: ยังไม่ได้ประเมิน -->
+                <label class="inline-flex items-center gap-1.5 cursor-pointer text-xs text-slate-600 font-bold select-none bg-slate-100 hover:bg-slate-200 px-2 py-0.5 rounded-lg border border-slate-300 transition-colors">
+                  <input 
+                    type="checkbox" 
+                    id="quick-damage-unassessed" 
+                    onchange="toggleDamageUnassessed(this.checked)" 
+                    class="rounded text-blue-600 w-3.5 h-3.5 cursor-pointer"
+                  />
+                  <span>ยังไม่ได้ประเมิน</span>
+                </label>
+              </div>
+              <input 
+                type="number" 
+                id="quick-damage-est" 
+                placeholder="เช่น 100000" 
+                class="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-800 font-mono text-center shadow-sm"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- SECTION 3: QUICK RELIEF REQUEST & CAMERA PHOTO UPLOAD -->
+        <div class="space-y-3 bg-slate-50/80 p-3.5 sm:p-4 rounded-2xl border border-slate-200">
+          <label class="block font-bold text-slate-800 text-sm flex items-center gap-1.5">
+            <span>📸 3. ภาพถ่ายจริง & ขอรับการสนับสนุนด่วน</span>
+          </label>
+
+          <!-- Photo Upload Button -->
+          <div>
+            <label class="bg-white hover:bg-blue-50/60 border-2 border-dashed border-blue-400 rounded-2xl p-4 text-center cursor-pointer transition-colors shadow-sm flex flex-col items-center justify-center gap-1">
+              <span class="text-3xl">📷</span>
+              <span class="font-bold text-blue-900 text-xs sm:text-sm">แตะเพื่อถ่ายรูปจากกล้องมือถือ หรือเลือกจากอัลบั้ม (สูงสุด 3 ภาพ)</span>
+              <span class="text-[11px] text-slate-400">ระบบจะช่วยย่อขนาดไฟล์อัตโนมัติ ไม่เปลืองเน็ตมือถือ</span>
+              <input 
+                type="file" 
+                id="quick-photo-input" 
+                accept="image/*" 
+                capture="environment" 
+                multiple 
+                onchange="handleQuickPhotoSelect(event)" 
+                class="hidden"
+              />
+            </label>
+
+            <!-- Photo Previews Grid -->
+            <div id="quick-photo-grid" class="grid grid-cols-3 gap-2 mt-2 empty:hidden"></div>
+          </div>
+
+          <!-- Relief Needs Dropdown -->
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">
+            สิ่งที่ต้องการขอรับการสนับสนุนเร่งด่วนจากหน่วยงานรัฐ:
+          </label>
+          <select 
+            id="quick-relief-need" 
+            class="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-800 font-semibold focus:outline-none focus:border-blue-600 shadow-sm cursor-pointer"
+          >
+            <option value="ไม่ต้องการความช่วยเหลือเร่งด่วน">ไม่ต้องการความช่วยเหลือเร่งด่วน (รายงานเพื่อเฝ้าระวัง)</option>
+            <option value="ขอหนังสือรับรองหยุดงานเหตุสุดวิสัย (ยื่นประกันสังคม ม.33)">ขอหนังสือรับรองหยุดงานเหตุสุดวิสัย (เพื่อยื่นขอเงินชดเชยว่างงาน ประกันสังคม ม.33 ทั้งหมดหรือบางส่วน)</option>
+            <option value="ต้องการคำปรึกษากฎหมายแรงงานกรณีเหตุสุดวิสัย">ต้องการคำปรึกษาข้อกฎหมายแรงงานกรณีเหตุสุดวิสัย / สิทธิประโยชน์ลูกจ้าง</option>
+            <option value="ต้องการถุงยังชีพ/อาหารและน้ำดื่มให้ลูกจ้าง">ต้องการถุงยังชีพ / อาหารและน้ำดื่มสะอาดให้ลูกจ้าง</option>
+            <option value="ต้องการเรือท้องแบน/รถยกสูงรับส่งลูกจ้าง">ต้องการเรือท้องแบน / รถยกสูงรับส่งลูกจ้างที่ติดค้าง</option>
+            <option value="ต้องการสุขาเคลื่อนที่/เวชภัณฑ์ยา">ต้องการสุขาเคลื่อนที่ / ยารักษาโรคน้ำกัดเท้า</option>
+            <option value="ต้องการสินเชื่อฟื้นฟูกองทุนความปลอดภัยฯ">ต้องการสินเชื่อฟื้นฟูกองทุนความปลอดภัยฯ / สินเชื่อดอกเบี้ยต่ำภาครัฐ</option>
+          </select>
+        </div>
+        </div>
+
+        <!-- Submit Button -->
+        <button 
+          type="submit" 
+          class="w-full py-4 px-6 rounded-2xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-extrabold text-base sm:text-lg shadow-xl shadow-emerald-600/30 flex items-center justify-center gap-2 cursor-pointer transition-transform active:scale-98"
+        >
+          <span>✅ ส่งรายงานผลกระทบเข้าสู่ระบบ สสค.กาญจนบุรี</span>
+        </button>
+      </form>
+
+      <!-- Success Receipt Ticket (Hidden by default) -->
+      <div id="quick-success-ticket" class="hidden bg-white rounded-3xl border-2 border-emerald-500 p-6 text-center space-y-3 shadow-2xl animate-in zoom-in-95">
+        <div class="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-3xl mx-auto">
+          ✓
+        </div>
+        <h3 class="text-xl font-bold text-slate-900">บันทึกข้อมูลเรียบร้อยแล้ว!</h3>
+        <p class="text-xs sm:text-sm text-slate-600">
+          ข้อมูลรายงานผลกระทบของท่านได้ส่งตรงถึงกลุ่มงานสวัสดิการแรงงาน สสค.กาญจนบุรี เรียบร้อยแล้ว
+        </p>
+        <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-left font-mono text-xs space-y-1">
+          <p><span class="text-slate-400">รหัสรายงาน:</span> <strong id="ticket-id" class="text-blue-700"></strong></p>
+          <p><span class="text-slate-400">ชื่อทางการค้า:</span> <strong id="ticket-trade-name" class="text-slate-800"></strong></p>
+          <p><span class="text-slate-400">เจ้าของ/ผู้แทน:</span> <strong id="ticket-owner-name" class="text-slate-700"></strong></p>
+          <p><span class="text-slate-400">ประเภทกิจการ:</span> <strong id="ticket-biz-type" class="text-emerald-700"></strong></p>
+          <p><span class="text-slate-400">อำเภอ:</span> <strong id="ticket-district" class="text-slate-800"></strong></p>
+          <p><span class="text-slate-400">เวลาที่บันทึก:</span> <strong id="ticket-time" class="text-slate-800"></strong></p>
+        </div>
+        <div class="pt-2 flex flex-col sm:flex-row gap-2">
+          <button 
+            type="button" 
+            onclick="resetToNewReport()" 
+            class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 px-4 rounded-xl text-xs cursor-pointer shadow"
+          >
+            + ส่งรายงานเพิ่มอีกรายการ
+          </button>
+          <button 
+            type="button" 
+            onclick="switchPortal('OFFICER')" 
+            class="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-bold py-2.5 px-4 rounded-xl text-xs cursor-pointer"
+          >
+            ดูภาพรวมบนแดชบอร์ดเจ้าหน้าที่
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- PORTAL 2: OFFICER & EXECUTIVE DASHBOARD (GIS MAP & ANALYTICS)     -->
+    <!-- ================================================================= -->
+    <div id="portal-officer" class="hidden space-y-6">
+      
+      <!-- Officer Alert Banner & CSV / Print / Logo Upload Actions -->
+      <div class="bg-gradient-to-r from-blue-900 via-indigo-950 to-slate-900 rounded-3xl p-5 text-white shadow-xl border border-blue-800/80 flex flex-col md:flex-row items-center justify-between gap-4 no-print">
+        <div class="flex items-center gap-3.5">
+          <div class="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-amber-300 text-2xl shrink-0">
+            📊
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h2 class="text-sm sm:text-base font-bold text-white">
+                ศูนย์บัญชาการสถานการณ์อุทกภัยต่อสถานประกอบการ จ.กาญจนบุรี (GIS Officer Command)
+              </h2>
+              <span class="bg-emerald-500/30 text-emerald-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-400/40">
+                🔒 ปลดล็อกแล้ว
+              </span>
+            </div>
+            <p class="text-xs text-blue-200 mt-0.5">
+              ติดตามสถานการณ์ 5 ลุ่มน้ำหลัก (แควใหญ่ • แควน้อย • แม่กลอง • ลำภาชี • ลำตะเพิน) • 13 อำเภอ
+            </p>
+          </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-2 shrink-0 w-full sm:w-auto justify-end">
+          <!-- Logo Upload Button -->
+          <button 
+            type="button" 
+            onclick="openLogoUploadModal()" 
+            class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 px-3.5 rounded-xl text-xs flex items-center gap-1.5 shadow transition-all cursor-pointer border border-blue-400/40"
+            title="อัปโหลดโลโก้หน่วยงานเพื่อแสดงที่มุมบนซ้ายแทนไอคอนคลื่นน้ำ"
+          >
+            <span>🖼️ โลโก้หน่วยงาน</span>
+          </button>
+          <button 
+            type="button" 
+            onclick="exportToCSV()" 
+            class="bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-xl text-xs flex items-center gap-2 shadow-lg transition-all cursor-pointer"
+            title="ส่งออกไฟล์ข้อมูล CSV พร้อมฟิลด์มาตรฐานสำหรับส่งต่อกรมสวัสดิการฯ หรือ ศบก.จังหวัด"
+          >
+            <span>📥 ส่งออก CSV</span>
+          </button>
+          <button 
+            type="button" 
+            onclick="window.print()" 
+            class="bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 font-bold py-2.5 px-3.5 rounded-xl text-xs flex items-center gap-1.5 shadow transition-all cursor-pointer"
+          >
+            <span>🖨️ พิมพ์ A4</span>
+          </button>
+          <!-- Officer Logout Button -->
+          <button 
+            type="button" 
+            onclick="lockOfficerPortal()" 
+            class="bg-red-950/80 hover:bg-red-800 border border-red-600/60 text-red-200 font-bold py-2.5 px-3 rounded-xl text-xs flex items-center gap-1 shadow transition-all cursor-pointer"
+            title="ล็อกหน้าจอแดชบอร์ดเจ้าหน้าที่"
+          >
+            <span>🔒 ล็อกหน้าจอ</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 lg:grid-cols-6 gap-3 sm:gap-4">
+        <!-- KPI 1: Impacted Enterprises Total -->
+        <div class="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm flex flex-col justify-between print-shadow-none">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold text-slate-500">สถานประกอบการ</span>
+            <span class="w-7 h-7 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xs font-bold">🏭</span>
+          </div>
+          <div>
+            <p id="kpi-total-enterprises" class="text-2xl sm:text-3xl font-extrabold text-blue-900 font-mono">0</p>
+            <span id="kpi-owner-types" class="text-[10px] text-slate-400 mt-0.5 block truncate">นิติบุคคล: 0 | บุคคล: 0</span>
+          </div>
+        </div>
+
+        <!-- KPI 2: Total Workers -->
+        <div class="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm flex flex-col justify-between print-shadow-none">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold text-slate-500">ลูกจ้างประสบภัยรวม</span>
+            <span class="w-7 h-7 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-xs font-bold">👥</span>
+          </div>
+          <div>
+            <p id="kpi-total-workers" class="text-2xl sm:text-3xl font-extrabold text-indigo-900 font-mono">0</p>
+            <span id="kpi-workers-breakdown" class="text-[10px] text-slate-400 mt-0.5 block truncate">สปก.: 0 | บ้าน: 0</span>
+          </div>
+        </div>
+
+        <!-- KPI 3: Migrant Workers -->
+        <div class="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm flex flex-col justify-between print-shadow-none">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold text-slate-500">แรงงานข้ามชาติ</span>
+            <span class="w-7 h-7 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center text-xs font-bold">🌐</span>
+          </div>
+          <div>
+            <p id="kpi-total-migrants" class="text-2xl sm:text-3xl font-extrabold text-teal-800 font-mono">0</p>
+            <span class="text-[11px] text-slate-400 mt-0.5 block">คน (MOU / ม.64)</span>
+          </div>
+        </div>
+
+        <!-- KPI 4: Temporary Shutdown (Force Majeure All / Partial) -->
+        <div class="bg-white p-4 rounded-3xl border border-amber-200 shadow-sm flex flex-col justify-between bg-amber-50/20 print-shadow-none">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold text-amber-800">หยุดงานเหตุสุดวิสัย</span>
+            <span class="w-7 h-7 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center text-xs font-bold">⏸️</span>
+          </div>
+          <div>
+            <p id="kpi-shutdown-enterprises" class="text-2xl sm:text-3xl font-extrabold text-amber-700 font-mono">0</p>
+            <span id="kpi-shutdown-sub" class="text-[10px] text-amber-800 font-semibold mt-0.5 block truncate">ทั้งหมด: 0 | บางส่วน: 0</span>
+          </div>
+        </div>
+
+        <!-- KPI 5: Estimated Damages -->
+        <div class="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm flex flex-col justify-between print-shadow-none">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold text-slate-500">ความเสียหายประเมิน</span>
+            <span class="w-7 h-7 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center text-xs font-bold">💸</span>
+          </div>
+          <div>
+            <p id="kpi-total-damages" class="text-2xl sm:text-3xl font-extrabold text-rose-700 font-mono">0.00</p>
+            <span class="text-[11px] text-slate-400 mt-0.5 block">ล้านบาท</span>
+          </div>
+        </div>
+
+        <!-- KPI 6: Urgent Relief Pending -->
+        <div class="bg-white p-4 rounded-3xl border border-red-200 shadow-sm flex flex-col justify-between bg-red-50/30 col-span-2 lg:col-span-1 print-shadow-none">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold text-red-700">ขอรับความช่วยเหลือ</span>
+            <span class="w-7 h-7 rounded-xl bg-red-100 text-red-600 flex items-center justify-center text-xs font-bold">🆘</span>
+          </div>
+          <div>
+            <p id="kpi-relief-pending" class="text-2xl sm:text-3xl font-extrabold text-red-700 font-mono">0</p>
+            <span class="text-[11px] text-red-600 font-medium mt-0.5 block">แห่ง (รอดำเนินการ)</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-3xl border border-slate-200 shadow-sm p-4 sm:p-6 space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+          <div>
+            <h3 class="text-base sm:text-lg font-bold text-slate-800 flex items-center gap-2">
+              <span>🗺️ แผนที่พิกัด GIS สถานประกอบการที่ประสบอุทกภัย (13 อำเภอ จ.กาญจนบุรี)</span>
+            </h3>
+            <p class="text-xs text-slate-400 mt-0.5">คลิกที่หมุดเพื่อดูข้อมูลร้านค้า/โรงงาน ภาพถ่ายความเสียหายจริง และพิกัดส่งทีมช่วยเหลือ</p>
+          </div>
+          <div class="flex items-center gap-3 text-xs">
+            <span class="inline-flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-red-500"></span> หยุดเหตุสุดวิสัย</span>
+            <span class="inline-flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-amber-500"></span> หยุดบางส่วน</span>
+            <span class="inline-flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-blue-500"></span> เปิดทำงานปกติ</span>
+          </div>
+        </div>
+
+        <!-- Leaflet Map Container -->
+        <div id="leaflet-map" class="w-full h-[460px] rounded-2xl border border-slate-200 shadow-inner"></div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Chart 1: Impact by 13 Kanchanaburi Districts -->
+        <div class="lg:col-span-2 bg-white p-5 sm:p-6 rounded-3xl border border-slate-200 shadow-sm print-shadow-none">
+          <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-100">
+            <div>
+              <h3 class="font-bold text-slate-800 text-sm sm:text-base flex items-center gap-2">
+                <span>📍 สถิติสถานประกอบการที่ได้รับผลกระทบ แยกราย 13 อำเภอ</span>
+              </h3>
+              <p class="text-xs text-slate-400 mt-0.5">จำนวนสถานประกอบการและลูกจ้างที่ได้รับผลกระทบในเขตจังหวัดกาญจนบุรี</p>
+            </div>
+            <span class="text-xs font-mono font-bold bg-slate-100 text-slate-600 px-2.5 py-1 rounded-lg">13 อำเภอ</span>
+          </div>
+          <div class="relative h-64 sm:h-72 w-full">
+            <canvas id="chart-district-impact"></canvas>
+          </div>
+        </div>
+
+        <!-- Chart 2: Status Breakdown Doughnut -->
+        <div class="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col justify-between print-shadow-none">
+          <div class="mb-2 pb-2 border-b border-slate-100">
+            <h3 class="font-bold text-slate-800 text-sm sm:text-base flex items-center gap-2">
+              <span>🏭 สัดส่วนสภาพการดำเนินกิจการ (เหตุสุดวิสัย vs ปกติ)</span>
+            </h3>
+            <p class="text-xs text-slate-400 mt-0.5">สัดส่วนการเปิดทำงานปกติ เทียบกับหยุดงานเหตุสุดวิสัยภัยธรรมชาติ</p>
+          </div>
+          <div class="relative h-56 w-full flex items-center justify-center">
+            <canvas id="chart-impact-type"></canvas>
+          </div>
+          <div id="impact-type-legend" class="mt-3 grid grid-cols-1 gap-1.5 text-xs text-slate-600 pt-2 border-t border-slate-100">
+            <!-- Dynamic legends inserted by JS -->
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden print-shadow-none">
+        <div class="p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h3 class="font-bold text-slate-800 text-base flex items-center gap-2">
+              <span>📋 ทะเบียนรายงานสถานประกอบการที่ประสบอุทกภัย</span>
+            </h3>
+            <p class="text-xs text-slate-400 mt-0.5">ตรวจสอบรายละเอียด ดูภาพถ่าย และบันทึกผลการประสานงานช่วยเหลือ</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <input 
+              type="text" 
+              id="registry-search" 
+              oninput="renderRegistryTable()" 
+              placeholder="🔍 ค้นหาชื่อกิจการ / อำเภอ..." 
+              class="bg-slate-50 border border-slate-300 rounded-xl px-3 py-1.5 text-xs text-slate-700 w-44 sm:w-52 focus:outline-none focus:border-blue-600"
+            />
+            <select 
+              id="registry-filter-type" 
+              onchange="renderRegistryTable()" 
+              class="bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 font-semibold focus:outline-none"
+            >
+              <option value="ALL">ทุกรูปแบบ</option>
+              <option value="INDIVIDUAL">บุคคลธรรมดา</option>
+              <option value="JURISTIC">นิติบุคคล</option>
+            </select>
+            <select 
+              id="registry-filter-biz" 
+              onchange="renderRegistryTable()" 
+              class="bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 font-semibold focus:outline-none max-w-[170px] truncate"
+              title="กรองตามประเภทกิจการ"
+            >
+              <option value="ALL">ทุกประเภทกิจการ</option>
+              <option value="แพอาหาร / แพท่องเที่ยว / ร้านอาหารริมน้ำ">แพอาหาร / ร้านอาหาร</option>
+              <option value="โรงแรม / รีสอร์ต / โฮมสเตย์ / ที่พักเชิงธรรมชาติ">โรงแรม / รีสอร์ต / ที่พัก</option>
+              <option value="โรงงานแปรรูปเกษตร / น้ำตาล / อาหารและเครื่องดื่ม">แปรรูปเกษตร / น้ำตาล</option>
+              <option value="โรงงานกระดาษ / เยื่อกระดาษ / บรรจุภัณฑ์ / พลาสติก">กระดาษ / บรรจุภัณฑ์</option>
+              <option value="โรงงานผลิตชิ้นส่วน / สิ่งทอ / วัสดุก่อสร้าง / เหมืองแร่">ชิ้นส่วน / วัสดุ / เหมือง</option>
+              <option value="กสิกรรม / ฟาร์มเลี้ยงสัตว์ / พืชไร่ / ประมง">กสิกรรม / ฟาร์มปศุสัตว์</option>
+              <option value="ค้าปลีก / ค้าส่ง / ห้างร้าน / ตลาดสด / ซูเปอร์มาร์เก็ต">ค้าปลีก / ค้าส่ง</option>
+              <option value="ขนส่ง / โลจิสติกส์ / คลังสินค้า / อู่ซ่อมยานยนต์">ขนส่ง / โลจิสติกส์</option>
+              <option value="ธุรกิจบริการ / สปา / สันทนาการ / คลินิก / สถานศึกษา">ธุรกิจบริการ / สปา</option>
+              <option value="กิจการและบริการอื่นๆ">กิจการอื่นๆ</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto custom-scrollbar">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr class="bg-slate-100/90 text-slate-700 font-bold border-b border-slate-200">
+                <th class="p-3 pl-5">วัน/เวลา</th>
+                <th class="p-3">รูปแบบ</th>
+                <th class="p-3">ประเภทกิจการ</th>
+                <th class="p-3">ชื่อทางการค้า / เจ้าของ</th>
+                <th class="p-3">อำเภอ</th>
+                <th class="p-3 text-center">ลูกจ้างประสบภัย/หยุดงาน</th>
+                <th class="p-3 text-center">ความเสียหาย</th>
+                <th class="p-3">สภาพการทำงาน</th>
+                <th class="p-3">ขอความช่วยเหลือ</th>
+                <th class="p-3 text-center">สถานะ</th>
+                <th class="p-3 pr-5 text-center">จัดการ</th>
+              </tr>
+            </thead>
+            <tbody id="registry-table-body" class="divide-y divide-slate-100">
+              <!-- Dynamically populated via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <div class="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 px-4 py-2 flex items-center justify-around text-[10px] font-bold text-slate-400 no-print">
+    <button onclick="switchPortal('EMPLOYER')" id="mob-portal-employer" class="flex flex-col items-center gap-1 text-emerald-400">
+      <span class="text-base">📱</span>
+      <span>แจ้งเหตุด่วน</span>
+    </button>
+    <button onclick="requestOfficerAccess()" id="mob-portal-officer" class="flex flex-col items-center gap-1 hover:text-white">
+      <span class="text-base">📊</span>
+      <span>แดชบอร์ดเจ้าหน้าที่ 🔒</span>
+    </button>
+  </div>
+  <!-- PIN Protection Modal for Officer Dashboard (PIN: 01082475) -->
+  <div id="officer-pin-modal" class="fixed inset-0 z-[100] bg-black/85 backdrop-blur-md hidden flex items-center justify-center p-4 no-print animate-in fade-in">
+    <div class="bg-white rounded-3xl max-w-sm w-full p-6 text-center text-slate-800 shadow-2xl border border-slate-100 space-y-4">
+      <div class="w-14 h-14 rounded-2xl bg-blue-100 text-blue-700 flex items-center justify-center text-2xl mx-auto shadow-inner">
+        🔒
+      </div>
+      <div>
+        <h3 class="font-extrabold text-lg text-slate-900">ยืนยันสิทธิ์เจ้าหน้าที่</h3>
+        <p class="text-xs text-slate-500 mt-1">
+          กรุณากรอกรหัสผ่านเพื่อเข้าสู่ศูนย์บัญชาการสถานการณ์อุทกภัย สสค.กาญจนบุรี
+        </p>
+      </div>
+
+      <div class="space-y-2">
+        <input 
+          type="password" 
+          id="officer-pin-input" 
+          maxlength="8" 
+          placeholder="••••••••" 
+          onkeydown="if(event.key==='Enter') submitOfficerPin()"
+          class="w-full bg-slate-50 border-2 border-slate-300 rounded-2xl px-4 py-3 text-center font-mono text-2xl font-bold tracking-[0.3em] text-blue-900 focus:outline-none focus:border-blue-600 focus:bg-white transition-all shadow-inner"
+        />
+        <p id="officer-pin-error" class="text-xs font-bold text-red-600 hidden animate-pulse">
+          ⚠️ รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง
+        </p>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2 pt-1">
+        <button 
+          type="button" 
+          onclick="closeOfficerPinModal()" 
+          class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2.5 rounded-xl text-xs cursor-pointer transition-colors"
+        >
+          ยกเลิก
+        </button>
+        <button 
+          type="button" 
+          onclick="submitOfficerPin()" 
+          class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded-xl text-xs cursor-pointer shadow transition-all"
+        >
+          ปลดล็อกแดชบอร์ด
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Agency Logo Upload Modal -->
+  <div id="logo-upload-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4 no-print animate-in fade-in">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 text-slate-800 shadow-2xl border border-slate-100 space-y-4">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div>
+          <h3 class="font-bold text-base text-blue-950 flex items-center gap-2">
+            <span>🖼️ ตราสัญลักษณ์ / โลโก้หน่วยงาน</span>
+          </h3>
+          <p class="text-xs text-slate-400">แสดงผลที่มุมบนซ้ายของทุกหน้าจอแทนไอคอนเดิม</p>
+        </div>
+        <button onclick="closeLogoUploadModal()" class="text-slate-400 hover:text-slate-600 text-lg cursor-pointer p-1">✕</button>
+      </div>
+
+      <!-- Current Logo Preview -->
+      <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 flex flex-col items-center justify-center text-center">
+        <div id="modal-logo-preview-box" class="w-24 h-24 rounded-2xl bg-white border border-slate-300 p-2 flex items-center justify-center shadow-inner overflow-hidden mb-2">
+          <span id="modal-logo-fallback" class="text-4xl">🌊</span>
+          <img id="modal-logo-img" src="" alt="Logo Preview" class="w-full h-full object-contain hidden" />
+        </div>
+        <span id="modal-logo-status" class="text-xs font-semibold text-slate-500">ใช้ไอคอนเริ่มต้นของระบบ</span>
+      </div>
+
+      <!-- File Input -->
+      <div>
+        <label class="w-full bg-blue-50 hover:bg-blue-100 border-2 border-dashed border-blue-400 text-blue-800 font-bold p-4 rounded-2xl flex flex-col items-center justify-center gap-1 cursor-pointer transition-colors text-xs text-center shadow-sm">
+          <span class="text-2xl">📤</span>
+          <span>แตะเพื่อเลือกไฟล์รูปภาพโลโก้ (PNG, JPG, WebP, SVG)</span>
+          <span class="text-[11px] text-slate-400 font-normal">ระบบจะย่อขนาดให้อัตโนมัติและจำไว้ในเบราว์เซอร์นี้</span>
+          <input 
+            type="file" 
+            id="agency-logo-file-input" 
+            accept="image/*" 
+            onchange="handleAgencyLogoUpload(event)" 
+            class="hidden" 
+          />
+        </label>
+      </div>
+
+      <div class="pt-2 flex gap-2">
+        <button 
+          type="button" 
+          onclick="removeAgencyLogo()" 
+          class="flex-1 bg-red-100 hover:bg-red-200 text-red-700 font-bold py-2.5 rounded-xl text-xs cursor-pointer transition-colors"
+        >
+          ลบ / คืนค่าเริ่มต้น
+        </button>
+        <button 
+          type="button" 
+          onclick="closeLogoUploadModal()" 
+          class="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-bold py-2.5 rounded-xl text-xs cursor-pointer transition-colors"
+        >
+          ปิดหน้าต่าง
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dynamic QR Modal -->
+  <div id="qr-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4 no-print animate-in fade-in">
+    <div class="bg-white rounded-3xl max-w-sm w-full p-6 text-center text-slate-800 shadow-2xl border border-slate-100 space-y-4">
+      <div class="flex justify-between items-center pb-2 border-b border-slate-100">
+        <h3 class="font-bold text-base text-blue-950">สแกนเปิดบนสมาร์ทโฟน</h3>
+        <button onclick="closeQrModal()" class="text-slate-400 hover:text-slate-700 text-lg cursor-pointer">✕</button>
+      </div>
+
+      <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 flex flex-col items-center">
+        <img 
+          id="qr-image" 
+          src="" 
+          alt="Dynamic QR Link" 
+          class="w-48 h-48 rounded-xl shadow-md border border-white bg-white"
+        />
+        <div class="w-full mt-3 bg-white p-2 rounded-xl border border-slate-200 font-mono text-[10px] text-blue-700 break-all select-all text-left">
+          <span class="text-slate-400 block font-sans text-[9px]">URL รายงานด่วน:</span>
+          <span id="qr-url-text"></span>
+        </div>
+        <p class="text-xs text-slate-500 mt-2 leading-relaxed">
+          ให้นายจ้างหรือร้านค้า สแกนเพื่อเปิดแบบฟอร์มรายงานผลกระทบอุทกภัยได้ทันที
+        </p>
+      </div>
+
+      <button 
+        type="button" 
+        onclick="copyReportUrl()" 
+        class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow cursor-pointer transition-colors"
+      >
+        <span>📋 คัดลอกลิงก์รายงานด่วน</span>
+      </button>
+    </div>
+  </div>
+
+  <div id="toast-box" class="fixed bottom-16 md:bottom-6 right-6 z-[100] transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none">
+    <div class="bg-slate-900 border border-emerald-500/50 text-white px-5 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3">
+      <span id="toast-icon" class="text-emerald-400 text-lg">✅</span>
+      <div>
+        <p id="toast-title" class="font-bold text-xs text-white"></p>
+        <p id="toast-desc" class="text-[11px] text-slate-300"></p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const OFFICER_PIN = '01082475';
+    let isOfficerAuthenticated = false;
+
+    // 13 Districts in Kanchanaburi Province with Default Coordinates & River Basins
+    const KANCHANABURI_DISTRICTS = [
+      { id: 'เมืองกาญจนบุรี', name: 'อำเภอเมืองกาญจนบุรี', river: 'แควใหญ่ / แควน้อย / แม่กลอง', lat: 14.0227, lng: 99.5328 },
+      { id: 'ไทรโยค', name: 'อำเภอไทรโยค', river: 'แควน้อย', lat: 14.1167, lng: 99.1417 },
+      { id: 'ท่าม่วง', name: 'อำเภอท่าม่วง', river: 'แม่กลอง / เขื่อนแม่กลอง', lat: 13.9667, lng: 99.6333 },
+      { id: 'ท่ามะกา', name: 'อำเภอท่ามะกา', river: 'แม่กลอง (เขตโรงงาน)', lat: 13.9214, lng: 99.7612 },
+      { id: 'ทองผาภูมิ', name: 'อำเภอทองผาภูมิ', river: 'แควน้อย / เขื่อนวชิราลงกรณ', lat: 14.7333, lng: 98.6333 },
+      { id: 'สังขละบุรี', name: 'อำเภอสังขละบุรี', river: 'ซองกาเลีย / รันตี / บีคลี่', lat: 15.1556, lng: 98.4539 },
+      { id: 'ด่านมะขามเตี้ย', name: 'อำเภอด่านมะขามเตี้ย', river: 'ลำภาชี', lat: 13.8500, lng: 99.4167 },
+      { id: 'บ่อพลอย', name: 'อำเภอบ่อพลอย', river: 'ลำตะเพิน', lat: 14.3242, lng: 99.5164 },
+      { id: 'ศรีสวัสดิ์', name: 'อำเภอศรีสวัสดิ์', river: 'อ่างเก็บน้ำเขื่อนศรีนครินทร์', lat: 14.9000, lng: 99.0333 },
+      { id: 'พนมทวน', name: 'อำเภอพนมทวน', river: 'คลองชลประทานพนมทวน', lat: 14.1333, lng: 99.7000 },
+      { id: 'เลาขวัญ', name: 'อำเภอเลาขวัญ', river: 'ลำห้วยสาขา', lat: 14.5833, lng: 99.7833 },
+      { id: 'หนองปรือ', name: 'อำเภอหนองปรือ', river: 'ลำห้วยสาขา', lat: 14.6000, lng: 99.4500 },
+      { id: 'ห้วยกระเจา', name: 'อำเภอห้วยกระเจา', river: 'ลำห้วยสาขา', lat: 14.3333, lng: 99.8167 }
+    ];
+
+    // Database of all 98 Subdistricts across 13 Districts in Kanchanaburi Province
+    const KANCHANABURI_SUBDISTRICTS = [
+      // เมืองกาญจนบุรี (13 ตำบล)
+      { subdistrict: 'บ้านเหนือ', district: 'เมืองกาญจนบุรี' },
+      { subdistrict: 'บ้านใต้', district: 'เมืองกาญจนบุรี' },
+      { subdistrict: 'ปากแพรก', district: 'เมืองกาญจนบุรี' },
+      { subdistrict: 'ท่ามะขาม', district: 'เมืองกาญจนบุรี' },
+      { subdistrict: 'แก่งเสี้ยน', district: 'เมืองกาญจนบุรี' },
+      { subdistrict: 'หนองบัว', district: 'เมืองกาญจนบุรี' },
+      { subdistrict: 'ลาดหญ้า', district: 'เมืองกาญจนบุรี' },
+      { subdistrict: 'วังด้ง', district: 'เมืองกาญจนบุรี' },
+      { subdistrict: 'ช่องสะเดา', district: 'เมืองกาญจนบุรี' },
+      { subdistrict: 'หนองหญ้า', district: 'เมืองกาญจนบุรี' },
+      { subdistrict: 'เกาะสำโรง', district: 'เมืองกาญจนบุรี' },
+      { subdistrict: 'บ้านเก่า', district: 'เมืองกาญจนบุรี' },
+      { subdistrict: 'วังเย็น', district: 'เมืองกาญจนบุรี' },
+
+      // ไทรโยค (7 ตำบล)
+      { subdistrict: 'ลุ่มสุ่ม', district: 'ไทรโยค' },
+      { subdistrict: 'ท่าเสา (ไทรโยค)', district: 'ไทรโยค', alias: 'ท่าเสา' },
+      { subdistrict: 'สิงห์', district: 'ไทรโยค' },
+      { subdistrict: 'ไทรโยค', district: 'ไทรโยค' },
+      { subdistrict: 'วังกระแจะ', district: 'ไทรโยค' },
+      { subdistrict: 'ศรีมงคล', district: 'ไทรโยค' },
+      { subdistrict: 'บ้องตี้', district: 'ไทรโยค', alias: 'บงตี้' },
+
+      // ท่าม่วง (13 ตำบล)
+      { subdistrict: 'ท่าม่วง', district: 'ท่าม่วง' },
+      { subdistrict: 'วังขนาย', district: 'ท่าม่วง' },
+      { subdistrict: 'วังศาลา', district: 'ท่าม่วง' },
+      { subdistrict: 'ท่าล้อ', district: 'ท่าม่วง' },
+      { subdistrict: 'หนองขาว', district: 'ท่าม่วง' },
+      { subdistrict: 'ทุ่งทอง', district: 'ท่าม่วง' },
+      { subdistrict: 'เขาน้อย', district: 'ท่าม่วง' },
+      { subdistrict: 'ม่วงชุม', district: 'ท่าม่วง' },
+      { subdistrict: 'บ้านใหม่', district: 'ท่าม่วง' },
+      { subdistrict: 'พังตรุ (ท่าม่วง)', district: 'ท่าม่วง', alias: 'พังตรุ' },
+      { subdistrict: 'ท่าตะคร้อ', district: 'ท่าม่วง' },
+      { subdistrict: 'รางสาลี่', district: 'ท่าม่วง' },
+      { subdistrict: 'หนองตากยา', district: 'ท่าม่วง' },
+
+      // ท่ามะกา (17 ตำบล)
+      { subdistrict: 'ท่ามะกา', district: 'ท่ามะกา' },
+      { subdistrict: 'พงตึก', district: 'ท่ามะกา' },
+      { subdistrict: 'ยางม่วง', district: 'ท่ามะกา' },
+      { subdistrict: 'ดอนชะเอม', district: 'ท่ามะกา' },
+      { subdistrict: 'ท่าไม้', district: 'ท่ามะกา' },
+      { subdistrict: 'ตะคร้ำเอน', district: 'ท่ามะกา' },
+      { subdistrict: 'ท่าเรือ', district: 'ท่ามะกา' },
+      { subdistrict: 'โคกตะบอง', district: 'ท่ามะกา' },
+      { subdistrict: 'ดอนขมิ้น', district: 'ท่ามะกา' },
+      { subdistrict: 'อุโลกสี่หมื่น', district: 'ท่ามะกา' },
+      { subdistrict: 'เขาสามสิบหาบ', district: 'ท่ามะกา' },
+      { subdistrict: 'พระแท่น', district: 'ท่ามะกา' },
+      { subdistrict: 'หวายเหนียว', district: 'ท่ามะกา' },
+      { subdistrict: 'แสนตอ', district: 'ท่ามะกา' },
+      { subdistrict: 'สนามแย้', district: 'ท่ามะกา' },
+      { subdistrict: 'ท่าเสา (ท่ามะกา)', district: 'ท่ามะกา' },
+      { subdistrict: 'หนองลาน', district: 'ท่ามะกา' },
+
+      // ทองผาภูมิ (7 ตำบล)
+      { subdistrict: 'ท่าขนุน', district: 'ทองผาภูมิ' },
+      { subdistrict: 'ปิล๊อก', district: 'ทองผาภูมิ' },
+      { subdistrict: 'หินดาด', district: 'ทองผาภูมิ' },
+      { subdistrict: 'ลิ่นถิ่น', district: 'ทองผาภูมิ' },
+      { subdistrict: 'ชะแล', district: 'ทองผาภูมิ' },
+      { subdistrict: 'ห้วยเขย่ง', district: 'ทองผาภูมิ' },
+      { subdistrict: 'สหกรณ์นิคม', district: 'ทองผาภูมิ' },
+
+      // สังขละบุรี (3 ตำบล)
+      { subdistrict: 'หนองลู', district: 'สังขละบุรี' },
+      { subdistrict: 'ปรังเผล', district: 'สังขละบุรี' },
+      { subdistrict: 'ไล่โว่', district: 'สังขละบุรี' },
+
+      // ด่านมะขามเตี้ย (4 ตำบล)
+      { subdistrict: 'ด่านมะขามเตี้ย', district: 'ด่านมะขามเตี้ย' },
+      { subdistrict: 'กลอนโด', district: 'ด่านมะขามเตี้ย' },
+      { subdistrict: 'จรเข้เผือก', district: 'ด่านมะขามเตี้ย' },
+      { subdistrict: 'หนองไผ่', district: 'ด่านมะขามเตี้ย' },
+
+      // บ่อพลอย (6 ตำบล)
+      { subdistrict: 'บ่อพลอย', district: 'บ่อพลอย' },
+      { subdistrict: 'หนองกุ่ม', district: 'บ่อพลอย' },
+      { subdistrict: 'หนองรี', district: 'บ่อพลอย' },
+      { subdistrict: 'หลุมรัง', district: 'บ่อพลอย' },
+      { subdistrict: 'ช่องด่าน', district: 'บ่อพลอย' },
+      { subdistrict: 'หนองกร่าง', district: 'บ่อพลอย' },
+
+      // ศรีสวัสดิ์ (6 ตำบล)
+      { subdistrict: 'นาสวน', district: 'ศรีสวัสดิ์' },
+      { subdistrict: 'ด่านแม่แฉลบ', district: 'ศรีสวัสดิ์' },
+      { subdistrict: 'หนองเป็ด', district: 'ศรีสวัสดิ์' },
+      { subdistrict: 'ท่ากระดาน', district: 'ศรีสวัสดิ์' },
+      { subdistrict: 'แม่กระบุง', district: 'ศรีสวัสดิ์' },
+      { subdistrict: 'เขาโจด', district: 'ศรีสวัสดิ์' },
+
+      // พนมทวน (8 ตำบล)
+      { subdistrict: 'พนมทวน', district: 'พนมทวน' },
+      { subdistrict: 'หนองโรง', district: 'พนมทวน' },
+      { subdistrict: 'ทุ่งสมอ', district: 'พนมทวน' },
+      { subdistrict: 'ดอนเจดีย์', district: 'พนมทวน' },
+      { subdistrict: 'รางหวาย', district: 'พนมทวน' },
+      { subdistrict: 'หนองสาหร่าย', district: 'พนมทวน' },
+      { subdistrict: 'ดอนตาเพชร', district: 'พนมทวน' },
+      { subdistrict: 'พังตรุ (พนมทวน)', district: 'พนมทวน' },
+
+      // เลาขวัญ (7 ตำบล)
+      { subdistrict: 'เลาขวัญ', district: 'เลาขวัญ' },
+      { subdistrict: 'หนองโสน', district: 'เลาขวัญ' },
+      { subdistrict: 'หนองประดู่', district: 'เลาขวัญ' },
+      { subdistrict: 'หนองปลิง', district: 'เลาขวัญ' },
+      { subdistrict: 'หนองนกแก้ว', district: 'เลาขวัญ' },
+      { subdistrict: 'ทุ่งกระบ่ำ', district: 'เลาขวัญ' },
+      { subdistrict: 'หนองฝ้าย', district: 'เลาขวัญ' },
+
+      // หนองปรือ (3 ตำบล)
+      { subdistrict: 'หนองปรือ', district: 'หนองปรือ' },
+      { subdistrict: 'หนองปลาไหล', district: 'หนองปรือ' },
+      { subdistrict: 'สมเด็จเจริญ', district: 'หนองปรือ' },
+
+      // ห้วยกระเจา (4 ตำบล)
+      { subdistrict: 'ห้วยกระเจา', district: 'ห้วยกระเจา' },
+      { subdistrict: 'วังไผ่', district: 'ห้วยกระเจา' },
+      { subdistrict: 'ดอนแสลบ', district: 'ห้วยกระเจา' },
+      { subdistrict: 'สระลงเรือ', district: 'ห้วยกระเจา' }
+    ];
+
+    const INITIAL_REPORTS = [
+      {
+        id: 'FL-71001',
+        timestamp: Date.now() - 3600000 * 3,
+        ownerType: 'INDIVIDUAL',
+        bizType: 'แพอาหาร / แพท่องเที่ยว / ร้านอาหารริมน้ำ',
+        tradeName: 'แพอาหารริมน้ำตัวอย่าง (สปก.สมมุติ)',
+        ownerName: 'นางสมมุติ สดใสยิ่ง',
+        regId: '',
+        district: 'เมืองกาญจนบุรี',
+        subdistrict: 'ต.สมมุติพัฒนา ริมแม่น้ำตัวอย่าง',
+        contactName: 'นางสมมุติ สดใสยิ่ง',
+        contactPhone: '081-998-1122',
+        lat: 14.0227,
+        lng: 99.5328,
+        workersTotal: 8,
+        workersMigrant: 3,
+        workersBizStop: 5,
+        workersImpact: 3,
+        operationStatus: 'หยุดงานบางส่วนจากเหตุสุดวิสัย (เฉพาะแผนก/พื้นที่ที่ประสบภัย)',
+        waterLevelCm: 85,
+        damageEstimate: 120000,
+        damageIsUnassessed: false,
+        reliefNeed: 'ต้องการเรือท้องแบน/รถยกสูงรับส่งลูกจ้าง',
+        photos: ['https://images.unsplash.com/photo-1547683905-f686c993aae5?w=500&auto=format&fit=crop&q=60'],
+        status: 'PENDING'
+      },
+      {
+        id: 'FL-71002',
+        timestamp: Date.now() - 3600000 * 6,
+        ownerType: 'JURISTIC',
+        bizType: 'โรงงานแปรรูปเกษตร / น้ำตาล / อาหารและเครื่องดื่ม',
+        tradeName: 'บริษัท สปก.เกษตรแปรรูปตัวอย่าง จำกัด (สมมุติ)',
+        ownerName: 'นายสมมุติ วงศ์ประเสริฐ',
+        regId: '0710000000000',
+        district: 'ท่ามะกา',
+        subdistrict: 'ต.ตัวอย่าง หมู่ 4',
+        contactName: 'นายตัวอย่าง กาญจนกิจ',
+        contactPhone: '081-456-7890',
+        lat: 13.9214,
+        lng: 99.7612,
+        workersTotal: 280,
+        workersMigrant: 45,
+        workersBizStop: 0,
+        workersImpact: 95,
+        operationStatus: 'เปิดทำงานตามปกติ',
+        waterLevelCm: 40,
+        damageEstimate: 350000,
+        damageIsUnassessed: false,
+        reliefNeed: 'ต้องการถุงยังชีพ/อาหารและน้ำดื่มให้ลูกจ้าง',
+        photos: [],
+        status: 'PENDING'
+      },
+      {
+        id: 'FL-71003',
+        timestamp: Date.now() - 3600000 * 10,
+        ownerType: 'INDIVIDUAL',
+        bizType: 'กสิกรรม / ฟาร์มเลี้ยงสัตว์ / พืชไร่ / ประมง',
+        tradeName: 'ฟาร์มเกษตรอินทรีย์ตัวอย่าง (สปก.สมมุติ)',
+        ownerName: 'นายตัวอย่าง รักษ์ดิน',
+        regId: '',
+        district: 'ด่านมะขามเตี้ย',
+        subdistrict: 'ต.สมมุติ ริมลำน้ำตัวอย่าง',
+        contactName: 'นายตัวอย่าง รักษ์ดิน',
+        contactPhone: '086-778-9900',
+        lat: 13.8500,
+        lng: 99.4167,
+        workersTotal: 12,
+        workersMigrant: 6,
+        workersBizStop: 8,
+        workersImpact: 4,
+        operationStatus: 'หยุดงานบางส่วนจากเหตุสุดวิสัย (เฉพาะแผนก/พื้นที่ที่ประสบภัย)',
+        waterLevelCm: 90,
+        damageEstimate: 0,
+        damageIsUnassessed: true,
+        reliefNeed: 'ต้องการถุงยังชีพ/อาหารและน้ำดื่มให้ลูกจ้าง',
+        photos: [],
+        status: 'DELIVERED'
+      },
+      {
+        id: 'FL-71004',
+        timestamp: Date.now() - 3600000 * 18,
+        ownerType: 'JURISTIC',
+        bizType: 'โรงแรม / รีสอร์ต / โฮมสเตย์ / ที่พักเชิงธรรมชาติ',
+        tradeName: 'บริษัท รีสอร์ตริมน้ำตัวอย่าง จำกัด (สมมุติ)',
+        ownerName: 'น.ส.สมมุติ ศรีสงบ',
+        regId: '0710000000001',
+        district: 'ไทรโยค',
+        subdistrict: 'ต.ตัวอย่างริมน้ำ ใกล้จุดชมวิวสมมุติ',
+        contactName: 'น.ส.สมมุติ ศรีสงบ',
+        contactPhone: '089-123-4567',
+        lat: 14.1167,
+        lng: 99.1417,
+        workersTotal: 45,
+        workersMigrant: 15,
+        workersBizStop: 45,
+        workersImpact: 0,
+        operationStatus: 'หยุดกิจการทั้งหมดชั่วคราวจากเหตุสุดวิสัย (ภัยธรรมชาติ)',
+        waterLevelCm: 120,
+        damageEstimate: 950000,
+        damageIsUnassessed: false,
+        reliefNeed: 'ขอหนังสือรับรองหยุดงานเหตุสุดวิสัย (ยื่นประกันสังคม ม.33)',
+        photos: ['https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?w=500&auto=format&fit=crop&q=60'],
+        status: 'DELIVERED'
+      }
+    ];
+
+    // State Variables
+    let reports = [];
+    let currentUploadedPhotos = [];
+    let gisMap = null;
+    let gisMarkers = [];
+    let chartDistrict = null;
+    let chartImpact = null;
+    let selectedActiveReportId = null;
+
+    function initData() {
+      const stored = localStorage.getItem('kanchanaburi_flood_reports_v4');
+      if (stored) {
+        try {
+          reports = JSON.parse(stored);
+        } catch (e) {
+          reports = INITIAL_REPORTS;
+        }
+      } else {
+        reports = INITIAL_REPORTS;
+        localStorage.setItem('kanchanaburi_flood_reports_v4', JSON.stringify(reports));
+      }
+
+      // Check session auth for Officer Dashboard
+      if (sessionStorage.getItem('kanchanaburi_officer_authed') === 'true') {
+        isOfficerAuthenticated = true;
+      }
+
+      renderNavbarLogo();
+    }
+
+    function persistData() {
+      localStorage.setItem('kanchanaburi_flood_reports_v4', JSON.stringify(reports));
+    }
+
+    function requestOfficerAccess() {
+      if (isOfficerAuthenticated) {
+        switchPortal('OFFICER');
+      } else {
+        document.getElementById('officer-pin-input').value = '';
+        document.getElementById('officer-pin-error').classList.add('hidden');
+        document.getElementById('officer-pin-modal').classList.remove('hidden');
+        setTimeout(() => document.getElementById('officer-pin-input').focus(), 150);
+      }
+    }
+
+    function closeOfficerPinModal() {
+      document.getElementById('officer-pin-modal').classList.add('hidden');
+    }
+
+    function submitOfficerPin() {
+      const input = document.getElementById('officer-pin-input');
+      const errorMsg = document.getElementById('officer-pin-error');
+      const val = (input.value || '').trim();
+
+      if (val === OFFICER_PIN) {
+        isOfficerAuthenticated = true;
+        sessionStorage.setItem('kanchanaburi_officer_authed', 'true');
+        closeOfficerPinModal();
+        switchPortal('OFFICER');
+        showToast('เข้าสู่ระบบสำเร็จ 🔓', 'ยินดีต้อนรับสู่ศูนย์บัญชาการสถานการณ์อุทกภัย สสค.กาญจนบุรี');
+      } else {
+        errorMsg.classList.remove('hidden');
+        input.value = '';
+        input.focus();
+        input.classList.add('border-red-500', 'bg-red-50');
+        setTimeout(() => input.classList.remove('border-red-500', 'bg-red-50'), 600);
+      }
+    }
+
+    function lockOfficerPortal() {
+      isOfficerAuthenticated = false;
+      sessionStorage.removeItem('kanchanaburi_officer_authed');
+      switchPortal('EMPLOYER');
+      showToast('ล็อกหน้าจอสำเร็จ 🔒', 'ออกจากระบบแดชบอร์ดเจ้าหน้าที่เรียบร้อยแล้ว');
+    }
+
+    function renderNavbarLogo() {
+      const savedLogo = localStorage.getItem('kanchanaburi_agency_logo');
+      const fallbackIcon = document.getElementById('navbar-brand-fallback-icon');
+      const customLogoImg = document.getElementById('navbar-brand-custom-logo');
+      const modalFallback = document.getElementById('modal-logo-fallback');
+      const modalImg = document.getElementById('modal-logo-img');
+      const modalStatus = document.getElementById('modal-logo-status');
+
+      if (savedLogo) {
+        fallbackIcon.classList.add('hidden');
+        customLogoImg.src = savedLogo;
+        customLogoImg.classList.remove('hidden');
+
+        if (modalFallback && modalImg) {
+          modalFallback.classList.add('hidden');
+          modalImg.src = savedLogo;
+          modalImg.classList.remove('hidden');
+          modalStatus.innerText = 'ติดตั้งโลโก้หน่วยงานแล้ว (พร้อมแสดงผลทุกหน้า)';
+          modalStatus.className = 'text-xs font-bold text-emerald-600';
+        }
+      } else {
+        fallbackIcon.classList.remove('hidden');
+        customLogoImg.classList.add('hidden');
+        customLogoImg.src = '';
+
+        if (modalFallback && modalImg) {
+          modalFallback.classList.remove('hidden');
+          modalImg.classList.add('hidden');
+          modalImg.src = '';
+          modalStatus.innerText = 'ใช้ไอคอนเริ่มต้นของระบบ (คลื่นน้ำ 🌊)';
+          modalStatus.className = 'text-xs font-semibold text-slate-500';
+        }
+      }
+    }
+
+    function openLogoUploadModal() {
+      renderNavbarLogo();
+      document.getElementById('logo-upload-modal').classList.remove('hidden');
+    }
+
+    function closeLogoUploadModal() {
+      document.getElementById('logo-upload-modal').classList.add('hidden');
+    }
+
+    function handleAgencyLogoUpload(event) {
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_SIZE = 240;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_SIZE) {
+              height *= MAX_SIZE / width;
+              width = MAX_SIZE;
+            }
+          } else {
+            if (height > MAX_SIZE) {
+              width *= MAX_SIZE / height;
+              height = MAX_SIZE;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          const compressed = canvas.toDataURL('image/png', 0.85);
+          localStorage.setItem('kanchanaburi_agency_logo', compressed);
+          renderNavbarLogo();
+          showToast('บันทึกโลโก้สำเร็จ! 🖼️', 'โลโก้หน่วยงานแสดงผลที่มุมบนซ้ายของทุกหน้าจอแล้ว');
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function removeAgencyLogo() {
+      localStorage.removeItem('kanchanaburi_agency_logo');
+      renderNavbarLogo();
+      showToast('คืนค่าไอคอนเริ่มต้น 🌊', 'ใช้สัญลักษณ์คลื่นน้ำมาตรฐานของระบบ');
+    }
+
+    // Single Consolidated & Error-Free setOwnerType function
+    function setOwnerType(type) {
+      const input = document.getElementById('quick-owner-type');
+      const btnInd = document.getElementById('type-btn-individual');
+      const btnJur = document.getElementById('type-btn-juristic');
+      const badge = document.getElementById('badge-owner-type');
+      const lblTrade = document.getElementById('label-trade-name');
+      const inputTrade = document.getElementById('quick-trade-name');
+      const lblOwner = document.getElementById('label-owner-name');
+      const inputOwner = document.getElementById('quick-owner-name');
+      const regWrapper = document.getElementById('wrapper-reg-id');
+      const lblReg = document.getElementById('label-reg-id');
+      const inputReg = document.getElementById('quick-reg-id');
+
+      if (!input || !btnInd || !btnJur) return;
+
+      input.value = type;
+
+      if (type === 'INDIVIDUAL') {
+        // Active Style: Individual (Emerald)
+        btnInd.className = 'py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all bg-emerald-600 text-white shadow-md cursor-pointer';
+        btnJur.className = 'py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all text-slate-600 hover:text-slate-900 cursor-pointer';
+        
+        if (badge) {
+          badge.innerText = 'บุคคลธรรมดา';
+          badge.className = 'text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300';
+        }
+
+        if (lblTrade) lblTrade.innerHTML = `ชื่อทางการค้า / ชื่อร้านค้า / ชื่อแพ / ฟาร์ม (บุคคลธรรมดา) <span class="text-red-500">*</span>`;
+        if (inputTrade) inputTrade.placeholder = 'เช่น ร้านค้าตัวอย่าง, แพอาหารริมน้ำสมมุติ, ไร่เกษตรตัวอย่าง (สปก.สมมุติ)';
+        
+        if (lblOwner) lblOwner.innerHTML = `ชื่อ-นามสกุล บุคคลผู้เป็นเจ้าของกิจการ / นายจ้าง <span class="text-red-500">*</span>`;
+        if (inputOwner) inputOwner.placeholder = 'เช่น นายสมมุติ มั่นคงดี, นางตัวอย่าง สดใสยิ่ง';
+        
+        if (regWrapper) regWrapper.classList.add('hidden');
+        if (inputReg) inputReg.required = false;
+
+      } else {
+        // Active Style: Juristic (Blue)
+        btnJur.className = 'py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all bg-blue-600 text-white shadow-md cursor-pointer';
+        btnInd.className = 'py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all text-slate-600 hover:text-slate-900 cursor-pointer';
+        
+        if (badge) {
+          badge.innerText = 'นิติบุคคล (บจก./หจก./บมจ.)';
+          badge.className = 'text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-300';
+        }
+
+        if (lblTrade) lblTrade.innerHTML = `ชื่อนิติบุคคล (บจก. / หจก. / บมจ.) <span class="text-red-500">*</span>`;
+        if (inputTrade) inputTrade.placeholder = 'เช่น บริษัท สปก.ตัวอย่างพัฒนา จำกัด หรือ หจก. กาญจน์ร่วมช่าง (สมมุติ)';
+        
+        if (lblOwner) lblOwner.innerHTML = `ชื่อ-นามสกุล กรรมการผู้จัดการ / ผู้แทนที่มีอำนาจลงนามแทนนิติบุคคล <span class="text-red-500">*</span>`;
+        if (inputOwner) inputOwner.placeholder = 'เช่น นายสมมุติ รักการงาน (กรรมการผู้จัดการ)';
+        
+        if (regWrapper) regWrapper.classList.remove('hidden');
+        if (lblReg) lblReg.innerHTML = `เลขทะเบียนนิติบุคคล 13 หลัก / เลขที่บัญชีนายจ้าง สปส. <span class="text-blue-600 font-bold">*</span>`;
+        if (inputReg) {
+          inputReg.placeholder = 'เช่น 0710000000000 หรือ เลขบัญชีนายจ้าง สปส. 10 หลัก (ตัวอย่าง)';
+        }
+      }
+    }
+
+    function initSubdistrictDatalist() {
+      const dl = document.getElementById('kanchanaburi-subdistricts-list');
+      if (!dl) return;
+      dl.innerHTML = '';
+      KANCHANABURI_SUBDISTRICTS.forEach(item => {
+        const opt = document.createElement('option');
+        opt.value = `ตำบล${item.subdistrict} (อำเภอ${item.district})`;
+        dl.appendChild(opt);
+      });
+    }
+
+    function handleSubdistrictInput(rawVal) {
+      if (!rawVal) {
+        document.getElementById('badge-auto-district')?.classList.add('hidden');
+        document.getElementById('badge-auto-location-summary')?.classList.add('hidden');
+        return;
+      }
+
+      // Clean prefix "ตำบล" or "ต." and trailing parenthesized district if picked from datalist
+      let clean = rawVal.replace(/^ตำบล\s*|^ต\.\s*/i, '').trim();
+      const parenMatch = clean.match(/^([^(]+)/);
+      if (parenMatch) clean = parenMatch[1].trim();
+
+      const matched = KANCHANABURI_SUBDISTRICTS.find(item => {
+        return item.subdistrict === clean || 
+               item.alias === clean ||
+               item.subdistrict.startsWith(clean) ||
+               clean.startsWith(item.subdistrict);
+      });
+
+      if (matched) {
+        const districtSelect = document.getElementById('quick-district');
+        const provinceInput = document.getElementById('quick-province');
+        const autoBadge = document.getElementById('badge-auto-district');
+        const summaryBadge = document.getElementById('badge-auto-location-summary');
+
+        if (districtSelect && districtSelect.value !== matched.district) {
+          districtSelect.value = matched.district;
+          updateQuickCoordsByDistrict(matched.district);
+        }
+
+        if (provinceInput) {
+          provinceInput.value = 'กาญจนบุรี';
+        }
+
+        if (autoBadge) autoBadge.classList.remove('hidden');
+        if (summaryBadge) {
+          summaryBadge.innerText = `📍 ตรวจพบ: ต.${matched.subdistrict} อ.${matched.district} จ.กาญจนบุรี`;
+          summaryBadge.classList.remove('hidden');
+        }
+      }
+    }
+
+    function copyOwnerToContact() {
+      const ownerVal = (document.getElementById('quick-owner-name')?.value || '').trim();
+      if (ownerVal) {
+        document.getElementById('quick-contact-name').value = ownerVal;
+      }
+    }
+
+    function toggleDamageUnassessed(isUnassessed) {
+      const damageInput = document.getElementById('quick-damage-est');
+      if (isUnassessed) {
+        damageInput.value = '';
+        damageInput.disabled = true;
+        damageInput.placeholder = 'ยังไม่ได้ประเมิน';
+        damageInput.classList.add('bg-slate-100', 'text-slate-400');
+      } else {
+        damageInput.disabled = false;
+        damageInput.placeholder = 'เช่น 100000';
+        damageInput.classList.remove('bg-slate-100', 'text-slate-400');
+        damageInput.focus();
+      }
+    }
+
+    function switchPortal(portalKey) {
+      const employerView = document.getElementById('portal-employer');
+      const officerView = document.getElementById('portal-officer');
+      const btnEmp = document.getElementById('portal-btn-employer');
+      const btnOff = document.getElementById('portal-btn-officer');
+      const mobEmp = document.getElementById('mob-portal-employer');
+      const mobOff = document.getElementById('mob-portal-officer');
+
+      if (portalKey === 'EMPLOYER') {
+        employerView.classList.remove('hidden');
+        officerView.classList.add('hidden');
+        btnEmp.className = 'px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl transition-all flex items-center gap-1.5 bg-emerald-600 text-white shadow-md cursor-pointer';
+        btnOff.className = 'px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl transition-all flex items-center gap-1.5 text-slate-300 hover:text-white cursor-pointer';
+        mobEmp.className = 'flex flex-col items-center gap-1 text-emerald-400 font-bold';
+        mobOff.className = 'flex flex-col items-center gap-1 text-slate-400';
+      } else {
+        employerView.classList.add('hidden');
+        officerView.classList.remove('hidden');
+        btnOff.className = 'px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl transition-all flex items-center gap-1.5 bg-blue-600 text-white shadow-md cursor-pointer';
+        btnEmp.className = 'px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl transition-all flex items-center gap-1.5 text-slate-300 hover:text-white cursor-pointer';
+        mobOff.className = 'flex flex-col items-center gap-1 text-blue-400 font-bold';
+        mobEmp.className = 'flex flex-col items-center gap-1 text-slate-400';
+
+        setTimeout(() => {
+          updateOfficerKPIs();
+          initOrRefreshGisMap();
+          renderOfficerCharts();
+          renderRegistryTable();
+        }, 150);
+      }
+    }
+
+    function acquireQuickGPS() {
+      const statusEl = document.getElementById('quick-gps-status');
+      if (!navigator.geolocation) {
+        statusEl.innerText = '⚠️ อุปกรณ์นี้ไม่รองรับระบบตรวจจับพิกัด GPS';
+        return;
+      }
+
+      statusEl.innerText = '🛰️ กำลังค้นหาตำแหน่งดาวเทียม GPS...';
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          const accuracy = Math.round(position.coords.accuracy);
+
+          document.getElementById('quick-lat').value = lat.toFixed(6);
+          document.getElementById('quick-lng').value = lng.toFixed(6);
+          statusEl.innerText = `✅ ได้รับพิกัดแล้ว: ${lat.toFixed(4)}, ${lng.toFixed(4)} (ความแม่นยำ ±${accuracy} ม.)`;
+          showToast('รับพิกัด GPS สำเร็จ 🛰️', `ละติจูด: ${lat.toFixed(4)}, ลองจิจูด: ${lng.toFixed(4)}`);
+        },
+        (error) => {
+          statusEl.innerText = `⚠️ ไม่สามารถดึงพิกัดได้: ${error.message} (สามารถพิมพ์ระบุเองได้)`;
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    }
+
+    function updateQuickCoordsByDistrict(districtId) {
+      const dist = KANCHANABURI_DISTRICTS.find(d => d.id === districtId);
+      if (dist) {
+        document.getElementById('quick-lat').value = dist.lat.toFixed(6);
+        document.getElementById('quick-lng').value = dist.lng.toFixed(6);
+        document.getElementById('quick-gps-status').innerText = `📍 ระบุพิกัดศูนย์กลาง ${dist.name}`;
+      }
+    }
+
+    function handleQuickPhotoSelect(event) {
+      const files = event.target.files;
+      if (!files || files.length === 0) return;
+
+      Array.from(files).slice(0, 3).forEach(file => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const MAX_WIDTH = 800;
+            const scaleSize = MAX_WIDTH / img.width;
+            canvas.width = Math.min(img.width, MAX_WIDTH);
+            canvas.height = img.height * (scaleSize < 1 ? scaleSize : 1);
+
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            const compressed = canvas.toDataURL('image/jpeg', 0.75);
+
+            currentUploadedPhotos.push(compressed);
+            renderQuickPhotoPreviews();
+          };
+          img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function renderQuickPhotoPreviews() {
+      const grid = document.getElementById('quick-photo-grid');
+      grid.innerHTML = '';
+      currentUploadedPhotos.forEach((photo, idx) => {
+        const item = document.createElement('div');
+        item.className = 'relative aspect-video rounded-xl overflow-hidden border border-slate-300 shadow-sm';
+        item.innerHTML = `
+          <img src="${photo}" alt="Preview" class="w-full h-full object-cover">
+          <button 
+            type="button" 
+            onclick="removeQuickPhoto(${idx})" 
+            class="absolute top-1 right-1 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold shadow cursor-pointer"
+          >✕</button>
+        `;
+        grid.appendChild(item);
+      });
+    }
+
+    function removeQuickPhoto(index) {
+      currentUploadedPhotos.splice(index, 1);
+      renderQuickPhotoPreviews();
+    }
+
+    function handleQuickFormSubmit(e) {
+      e.preventDefault();
+
+      const ownerType = document.getElementById('quick-owner-type').value;
+      const bizType = document.getElementById('quick-biz-type').value;
+      const tradeName = document.getElementById('quick-trade-name').value.trim();
+      const ownerName = document.getElementById('quick-owner-name').value.trim();
+      const regId = document.getElementById('quick-reg-id')?.value.trim() || '';
+      
+      const subdistrictRaw = document.getElementById('quick-subdistrict').value.trim();
+      const addressDetail = document.getElementById('quick-address-detail')?.value.trim() || '';
+      const district = document.getElementById('quick-district').value;
+      const province = document.getElementById('quick-province')?.value || 'กาญจนบุรี';
+      const subdistrict = subdistrictRaw + (addressDetail ? ` (${addressDetail})` : '');
+
+      const contactName = document.getElementById('quick-contact-name').value.trim();
+      const contactPhone = document.getElementById('quick-contact-phone').value.trim();
+
+      const lat = parseFloat(document.getElementById('quick-lat').value) || 14.0227;
+      const lng = parseFloat(document.getElementById('quick-lng').value) || 99.5328;
+
+      const workersTotal = parseInt(document.getElementById('quick-workers-total').value, 10) || 0;
+      const workersMigrant = parseInt(document.getElementById('quick-workers-migrant').value, 10) || 0;
+      const workersBizStop = parseInt(document.getElementById('quick-workers-biz-stop').value, 10) || 0;
+      const workersImpact = parseInt(document.getElementById('quick-workers-impact').value, 10) || 0;
+
+      const opRadio = document.querySelector('input[name="quick-op-status"]:checked');
+      const operationStatus = opRadio ? opRadio.value : 'เปิดทำงานตามปกติ';
+
+      const waterLevelCm = parseInt(document.getElementById('quick-water-level').value, 10) || 0;
+      
+      const isUnassessed = document.getElementById('quick-damage-unassessed').checked;
+      const damageEstimate = isUnassessed ? 0 : (parseFloat(document.getElementById('quick-damage-est').value) || 0);
+      const reliefNeed = document.getElementById('quick-relief-need').value;
+
+      if (!tradeName || !ownerName || !bizType || !district || !contactPhone || workersTotal <= 0) {
+        showToast('กรอกข้อมูลไม่ครบถ้วน ⚠️', 'กรุณาระบุชื่อทางการค้า ชื่อเจ้าของกิจการ ประเภทกิจการ อำเภอ เบอร์ติดต่อ และจำนวนลูกจ้าง');
+        return;
+      }
+
+      const reportId = 'FL-' + Date.now().toString().slice(-5);
+      const newReport = {
+        id: reportId,
+        timestamp: Date.now(),
+        ownerType,
+        bizType,
+        tradeName,
+        ownerName,
+        companyName: tradeName, // Backward-compatible alias
+        regId,
+        district,
+        subdistrict,
+        contactName,
+        contactPhone,
+        lat,
+        lng,
+        workersTotal,
+        workersMigrant,
+        workersBizStop,
+        workersImpact,
+        operationStatus,
+        waterLevelCm,
+        damageEstimate,
+        damageIsUnassessed: isUnassessed,
+        reliefNeed,
+        photos: [...currentUploadedPhotos],
+        status: 'PENDING'
+      };
+
+      reports.unshift(newReport);
+      persistData();
+
+      // Show Success Ticket
+      document.getElementById('ticket-id').innerText = newReport.id;
+      document.getElementById('ticket-trade-name').innerText = newReport.tradeName;
+      document.getElementById('ticket-owner-name').innerText = newReport.ownerName;
+      document.getElementById('ticket-biz-type').innerText = newReport.bizType;
+      document.getElementById('ticket-district').innerText = `ต.${subdistrictRaw} อ.${newReport.district} จ.${province}`;
+      document.getElementById('ticket-time').innerText = new Date(newReport.timestamp).toLocaleString('th-TH');
+
+      document.getElementById('quick-flood-form').classList.add('hidden');
+      document.getElementById('quick-success-ticket').classList.remove('hidden');
+
+      showToast('บันทึกรายงานสำเร็จ! ✅', `รหัส ${newReport.id} ส่งต่อทีม สสค.กาญจนบุรี แล้ว`);
+    }
+
+    function resetToNewReport() {
+      document.getElementById('quick-flood-form').reset();
+      currentUploadedPhotos = [];
+      renderQuickPhotoPreviews();
+      toggleDamageUnassessed(false);
+      document.getElementById('quick-gps-status').innerText = 'แตะปุ่มเพื่อดึงตำแหน่งอัตโนมัติจากมือถือ';
+      
+      document.getElementById('quick-workers-total').value = '';
+      document.getElementById('quick-workers-migrant').value = '0';
+      document.getElementById('quick-workers-biz-stop').value = '0';
+      document.getElementById('quick-workers-impact').value = '';
+
+      document.getElementById('quick-subdistrict').value = '';
+      document.getElementById('quick-district').value = '';
+      document.getElementById('quick-province').value = 'กาญจนบุรี';
+      if (document.getElementById('quick-address-detail')) {
+        document.getElementById('quick-address-detail').value = '';
+      }
+      document.getElementById('badge-auto-district')?.classList.add('hidden');
+      document.getElementById('badge-auto-location-summary')?.classList.add('hidden');
+
+      document.getElementById('quick-flood-form').classList.remove('hidden');
+      document.getElementById('quick-success-ticket').classList.add('hidden');
+      setOwnerType('INDIVIDUAL');
+    }
+
+    function updateOfficerKPIs() {
+      const totalEnt = reports.length;
+      let totalWorkers = 0;
+      let totalBizStop = 0;
+      let totalHomeStop = 0;
+      let totalMigrant = 0;
+      let totalShutdownAll = 0;
+      let totalShutdownPartial = 0;
+      let totalDamage = 0;
+      let countUnassessed = 0;
+      let pendingRelief = 0;
+      let countInd = 0;
+      let countJur = 0;
+
+      reports.forEach(r => {
+        const bizStop = (parseInt(r.workersBizStop, 10) || 0);
+        const homeStop = (parseInt(r.workersImpact, 10) || 0);
+        totalBizStop += bizStop;
+        totalHomeStop += homeStop;
+        totalWorkers += (bizStop + homeStop);
+        totalMigrant += (parseInt(r.workersMigrant, 10) || 0);
+        if (r.ownerType === 'INDIVIDUAL') countInd++;
+        else countJur++;
+
+        const op = r.operationStatus || '';
+        if (op.includes('ทั้งหมด') || (op.includes('เหตุสุดวิสัย') && !op.includes('บางส่วน'))) {
+          totalShutdownAll++;
+        } else if (op.includes('บางส่วน')) {
+          totalShutdownPartial++;
+        }
+        
+        if (r.damageIsUnassessed) {
+          countUnassessed++;
+        } else {
+          totalDamage += (parseFloat(r.damageEstimate) || 0);
+        }
+
+        if (r.status === 'PENDING') pendingRelief++;
+      });
+
+      document.getElementById('kpi-total-enterprises').innerText = totalEnt.toLocaleString();
+      document.getElementById('kpi-owner-types').innerText = `นิติบุคคล: ${countJur} | บุคคล: ${countInd}`;
+      document.getElementById('kpi-total-workers').innerText = totalWorkers.toLocaleString();
+      const kpiWorkersBreakdown = document.getElementById('kpi-workers-breakdown');
+      if (kpiWorkersBreakdown) {
+        kpiWorkersBreakdown.innerText = `สปก.: ${totalBizStop} | บ้าน: ${totalHomeStop}`;
+      }
+      document.getElementById('kpi-total-migrants').innerText = totalMigrant.toLocaleString();
+      
+      const combinedShutdown = totalShutdownAll + totalShutdownPartial;
+      document.getElementById('kpi-shutdown-enterprises').innerText = combinedShutdown.toLocaleString();
+      const kpiShutdownSub = document.getElementById('kpi-shutdown-sub');
+      if (kpiShutdownSub) {
+        kpiShutdownSub.innerText = `ทั้งหมด: ${totalShutdownAll} | บางส่วน: ${totalShutdownPartial}`;
+      }
+      
+      const damageMillions = (totalDamage / 1000000).toFixed(2);
+      document.getElementById('kpi-total-damages').innerText = damageMillions;
+      const damageKpiCard = document.getElementById('kpi-total-damages').parentElement.querySelector('span');
+      if (damageKpiCard) {
+        damageKpiCard.innerText = countUnassessed > 0 
+          ? `ล้านบาท (${countUnassessed} แห่งยังไม่ได้ประเมิน)` 
+          : 'ล้านบาท';
+      }
+
+      document.getElementById('kpi-relief-pending').innerText = pendingRelief.toLocaleString();
+    }
+
+    function renderOfficerCharts() {
+      const districtLabels = KANCHANABURI_DISTRICTS.map(d => d.name.replace('อำเภอ', ''));
+      const districtEntCounts = KANCHANABURI_DISTRICTS.map(d => reports.filter(r => r.district === d.id).length);
+      const districtWorkerCounts = KANCHANABURI_DISTRICTS.map(d => {
+        return reports
+          .filter(r => r.district === d.id)
+          .reduce((sum, r) => sum + ((parseInt(r.workersImpact, 10) || 0) + (parseInt(r.workersBizStop, 10) || 0)), 0);
+      });
+
+      const ctxDistrict = document.getElementById('chart-district-impact').getContext('2d');
+      if (chartDistrict) chartDistrict.destroy();
+      chartDistrict = new Chart(ctxDistrict, {
+        type: 'bar',
+        data: {
+          labels: districtLabels,
+          datasets: [
+            {
+              label: 'สถานประกอบการ (แห่ง)',
+              data: districtEntCounts,
+              backgroundColor: 'rgba(37, 99, 235, 0.85)',
+              borderRadius: 8,
+              yAxisID: 'y'
+            },
+            {
+              label: 'ลูกจ้างเดือดร้อน (คน)',
+              data: districtWorkerCounts,
+              backgroundColor: 'rgba(99, 102, 241, 0.35)',
+              borderColor: 'rgba(99, 102, 241, 1)',
+              borderWidth: 1.5,
+              borderRadius: 8,
+              yAxisID: 'y1'
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          scales: {
+            x: { grid: { display: false }, ticks: { font: { family: 'Prompt', size: 10 } } },
+            y: { type: 'linear', position: 'left', beginAtZero: true, ticks: { precision: 0 } },
+            y1: { type: 'linear', position: 'right', beginAtZero: true, grid: { drawOnChartArea: false }, ticks: { precision: 0 } }
+          },
+          plugins: {
+            legend: { position: 'top', labels: { font: { family: 'Prompt', size: 11 } } }
+          }
+        }
+      });
+
+      // Status Doughnut (Force Majeure All vs Partial vs Normal)
+      let normalCount = 0, partialCount = 0, shutdownAllCount = 0;
+      reports.forEach(r => {
+        const op = r.operationStatus || '';
+        if (op.includes('ทั้งหมด') || (op.includes('เหตุสุดวิสัย') && !op.includes('บางส่วน'))) {
+          shutdownAllCount++;
+        } else if (op.includes('บางส่วน')) {
+          partialCount++;
+        } else {
+          normalCount++;
+        }
+      });
+
+      const ctxImpact = document.getElementById('chart-impact-type').getContext('2d');
+      if (chartImpact) chartImpact.destroy();
+      chartImpact = new Chart(ctxImpact, {
+        type: 'doughnut',
+        data: {
+          labels: ['เปิดทำงานปกติ', 'หยุดบางส่วน (เหตุสุดวิสัย)', 'หยุดทั้งหมด (เหตุสุดวิสัย)'],
+          datasets: [{
+            data: [normalCount, partialCount, shutdownAllCount],
+            backgroundColor: ['#2563eb', '#f59e0b', '#ef4444'],
+            borderWidth: 2,
+            borderColor: '#ffffff'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '70%',
+          plugins: { legend: { display: false } }
+        }
+      });
+
+      document.getElementById('impact-type-legend').innerHTML = `
+        <div class="flex items-center justify-between"><span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-blue-600"></span> เปิดทำงานปกติ</span><strong>${normalCount} แห่ง</strong></div>
+        <div class="flex items-center justify-between"><span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span> หยุดบางส่วน (เหตุสุดวิสัย)</span><strong>${partialCount} แห่ง</strong></div>
+        <div class="flex items-center justify-between"><span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-red-500"></span> หยุดทั้งหมด (เหตุสุดวิสัย)</span><strong>${shutdownAllCount} แห่ง</strong></div>
+      `;
+    }
+
+    function initOrRefreshGisMap() {
+      if (!gisMap) {
+        gisMap = L.map('leaflet-map').setView([14.2500, 99.3000], 9);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 18,
+          attribution: '&copy; OpenStreetMap'
+        }).addTo(gisMap);
+      } else {
+        gisMap.invalidateSize();
+      }
+
+      gisMarkers.forEach(m => gisMap.removeLayer(m));
+      gisMarkers = [];
+
+      reports.forEach(r => {
+        if (!r.lat || !r.lng) return;
+
+        const op = r.operationStatus || '';
+        const isShutdownAll = op.includes('ทั้งหมด') || (op.includes('เหตุสุดวิสัย') && !op.includes('บางส่วน'));
+        const isPartial = op.includes('บางส่วน');
+        const markerColor = isShutdownAll ? '#ef4444' : isPartial ? '#f59e0b' : '#3b82f6';
+        const typeIcon = r.ownerType === 'INDIVIDUAL' ? '👤' : '🏭';
+
+        const customIcon = L.divIcon({
+          className: 'custom-pin',
+          html: `<div style="background-color: ${markerColor}; width: 28px; height: 28px; border-radius: 50%; border: 3px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; color: white; font-size: 12px;">${typeIcon}</div>`,
+          iconSize: [28, 28],
+          iconAnchor: [14, 14]
+        });
+
+        const marker = L.marker([r.lat, r.lng], { icon: customIcon }).addTo(gisMap);
+
+        const totalWorkerImpacted = (parseInt(r.workersImpact, 10) || 0) + (parseInt(r.workersBizStop, 10) || 0);
+
+        const popupContent = `
+          <div class="text-xs space-y-1.5 p-1">
+            <div class="flex items-center gap-1">
+              <span class="text-[10px] font-bold px-1.5 py-0.5 rounded ${r.ownerType==='INDIVIDUAL'?'bg-emerald-100 text-emerald-800':'bg-blue-100 text-blue-800'}">${r.ownerType==='INDIVIDUAL'?'บุคคลธรรมดา':'นิติบุคคล'}</span>
+              <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 truncate max-w-[130px]">${r.bizType || 'ไม่ระบุ'}</span>
+            </div>
+            <h4 class="font-bold text-blue-900 text-sm mt-1">${r.tradeName || r.companyName}</h4>
+            <p class="text-slate-500">อ.${r.district} ${r.subdistrict ? '('+r.subdistrict+')' : ''}</p>
+            <p><strong>สภาพการทำงาน:</strong> <span style="color: ${markerColor}">${r.operationStatus}</span></p>
+            <p><strong>ลูกจ้างทั้งหมด:</strong> ${r.workersTotal} คน (ต่างด้าว: ${r.workersMigrant || 0} คน)</p>
+            <p><strong>หยุดงานเหตุสุดวิสัย สปก.:</strong> ${r.workersBizStop || 0} คน</p>
+            <p><strong>เดือดร้อนหยุดงาน (บ้านประสพภัย):</strong> ${r.workersImpact || 0} คน</p>
+            <button onclick="openActionModal('${r.id}')" class="mt-2 w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-1.5 px-3 rounded-lg text-xs cursor-pointer shadow">
+              ดูรายละเอียด / ภาพถ่าย
+            </button>
+          </div>
+        `;
+        marker.bindPopup(popupContent);
+        gisMarkers.push(marker);
+      });
+    }
+
+    function renderRegistryTable() {
+      const tbody = document.getElementById('registry-table-body');
+      tbody.innerHTML = '';
+      const query = (document.getElementById('registry-search')?.value || '').trim().toLowerCase();
+      const filterType = document.getElementById('registry-filter-type')?.value || 'ALL';
+      const filterBiz = document.getElementById('registry-filter-biz')?.value || 'ALL';
+
+      const filtered = reports.filter(r => {
+        if (filterType !== 'ALL' && r.ownerType !== filterType) return false;
+        if (filterBiz !== 'ALL' && r.bizType !== filterBiz) return false;
+        if (query) {
+          const matchTrade = (r.tradeName || r.companyName || '').toLowerCase().includes(query);
+          const matchOwner = (r.ownerName || '').toLowerCase().includes(query);
+          const matchDist = (r.district || '').toLowerCase().includes(query);
+          const matchContact = (r.contactName || '').toLowerCase().includes(query);
+          const matchBiz = (r.bizType || '').toLowerCase().includes(query);
+          if (!matchTrade && !matchOwner && !matchDist && !matchContact && !matchBiz) return false;
+        }
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="11" class="p-8 text-center text-slate-400 font-medium">ไม่พบข้อมูลรายงานตามเงื่อนไขที่เลือก</td></tr>`;
+        return;
+      }
+
+      filtered.forEach(r => {
+        const tradeTitle = r.tradeName || r.companyName || '-';
+        const ownerTitle = r.ownerName || '-';
+        const damageDisplay = r.damageIsUnassessed 
+          ? `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">ยังไม่ได้ประเมิน</span>`
+          : `<span class="font-mono text-slate-700">${(r.damageEstimate || 0).toLocaleString()} ฿</span>`;
+
+        const op = r.operationStatus || '';
+        const isShutdownAll = op.includes('ทั้งหมด') || (op.includes('เหตุสุดวิสัย') && !op.includes('บางส่วน'));
+        const isPartial = op.includes('บางส่วน');
+        const statusBadgeClass = isShutdownAll 
+          ? 'bg-red-100 text-red-700 border border-red-200' 
+          : isPartial 
+          ? 'bg-amber-100 text-amber-800 border border-amber-200' 
+          : 'bg-blue-100 text-blue-800 border border-blue-200';
+
+        const totalWorkerImpacted = (parseInt(r.workersImpact, 10) || 0) + (parseInt(r.workersBizStop, 10) || 0);
+
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50 transition-colors';
+        tr.innerHTML = `
+          <td class="p-3 pl-5 text-slate-500 font-mono text-[11px] whitespace-nowrap">${new Date(r.timestamp).toLocaleDateString('th-TH')}</td>
+          <td class="p-3">
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${r.ownerType === 'INDIVIDUAL' ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800'}">
+              ${r.ownerType === 'INDIVIDUAL' ? 'บุคคลธรรมดา' : 'นิติบุคคล'}
+            </span>
+          </td>
+          <td class="p-3">
+            <span class="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[10px] font-medium block max-w-[130px] truncate" title="${r.bizType || '-'}">
+              ${r.bizType || '-'}
+            </span>
+          </td>
+          <td class="p-3">
+            <strong class="text-blue-900 block text-xs font-bold">${tradeTitle}</strong>
+            <span class="text-[11px] text-slate-600 block">👤 ${r.ownerType === 'INDIVIDUAL' ? 'เจ้าของ:' : 'ผู้แทน:'} ${ownerTitle}</span>
+            <span class="text-[10px] text-slate-400 font-mono">โทร: ${r.contactPhone}</span>
+          </td>
+          <td class="p-3 font-semibold text-slate-700">${r.district}</td>
+          <td class="p-3 text-center font-mono">
+            <strong class="text-red-600 block text-xs">${totalWorkerImpacted} คน</strong>
+            <span class="text-[9px] text-slate-500 block leading-tight">สปก.: ${r.workersBizStop || 0} | บ้าน: ${r.workersImpact || 0}</span>
+          </td>
+          <td class="p-3 text-center">${damageDisplay}</td>
+          <td class="p-3">
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${statusBadgeClass}">
+              ${r.operationStatus}
+            </span>
+          </td>
+          <td class="p-3 text-slate-600 truncate max-w-[120px]" title="${r.reliefNeed}">${r.reliefNeed}</td>
+          <td class="p-3 text-center">
+            ${r.status === 'PENDING'
+              ? `<span class="bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded-full text-[10px]">รอดำเนินการ</span>`
+              : `<span class="bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded-full text-[10px]">ช่วยเหลือแล้ว</span>`
+            }
+          </td>
+          <td class="p-3 pr-5 text-center">
+            <button 
+              type="button" 
+              onclick="openActionModal('${r.id}')" 
+              class="bg-blue-50 hover:bg-blue-100 text-blue-700 px-2.5 py-1 rounded-lg font-bold text-[11px] cursor-pointer"
+            >
+              ดู/อัปเดต
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function openActionModal(reportId) {
+      selectedActiveReportId = reportId;
+      const r = reports.find(item => item.id === reportId);
+      if (!r) return;
+
+      const tradeTitle = r.tradeName || r.companyName || '-';
+      const ownerTitle = r.ownerName || '-';
+
+      document.getElementById('modal-title').innerText = `${tradeTitle}`;
+      document.getElementById('modal-subtitle').innerText = `รหัส: ${r.id} | รูปแบบ: ${r.ownerType === 'INDIVIDUAL' ? 'บุคคลธรรมดา' : 'นิติบุคคล'} | อ.${r.district}`;
+
+      let photosHtml = '';
+      if (r.photos && r.photos.length > 0) {
+        photosHtml = `
+          <div class="mt-2">
+            <strong class="text-slate-700 block mb-1">ภาพถ่ายความเสียหาย (${r.photos.length} ภาพ):</strong>
+            <div class="grid grid-cols-3 gap-2">
+              ${r.photos.map(p => `<img src="${p}" alt="Photo" class="rounded-xl border border-slate-200 aspect-video object-cover">`).join('')}
+            </div>
+          </div>
+        `;
+      }
+
+      const damageText = r.damageIsUnassessed 
+        ? '<strong class="text-amber-700">ยังไม่ได้ประเมิน</strong>'
+        : `<strong>${(r.damageEstimate || 0).toLocaleString()} บาท</strong>`;
+
+      document.getElementById('modal-content').innerHTML = `
+        <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1">
+          <p><strong>ชื่อทางการค้า / ชื่อสถานประกอบการ:</strong> <span class="text-blue-900 font-bold">${tradeTitle}</span></p>
+          <p><strong>ชื่อเจ้าของกิจการ / ผู้แทนนิติบุคคล:</strong> <span class="text-slate-800 font-semibold">${ownerTitle}</span></p>
+          <p><strong>ประเภทกิจการ / สาขาธุรกิจ:</strong> <span class="text-slate-700">${r.bizType || '-'}</span></p>
+          <p><strong>ผู้ประสานงานหน้างาน:</strong> ${r.contactName} (โทร: <a href="tel:${r.contactPhone}" class="text-blue-600 font-bold underline font-mono">${r.contactPhone}</a>)</p>
+          <p><strong>ที่ตั้ง:</strong> ${r.subdistrict || '-'} อ.${r.district} จ.กาญจนบุรี</p>
+          <p><strong>พิกัด GPS:</strong> <span class="font-mono text-blue-700 font-bold">${r.lat ? r.lat.toFixed(5) + ', ' + r.lng.toFixed(5) : 'ไม่ได้ระบุ'}</span></p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 bg-slate-50 p-3 rounded-xl border border-slate-200 font-mono text-xs">
+          <div><span class="text-slate-400 block font-sans">ลูกจ้างทั้งหมด:</span><strong>${r.workersTotal} คน</strong></div>
+          <div><span class="text-slate-400 block font-sans">แรงงานต่างด้าว:</span><strong class="text-teal-700">${r.workersMigrant || 0} คน</strong></div>
+          <div><span class="text-slate-400 block font-sans">หยุดงาน (เหตุสุดวิสัย สปก.):</span><strong class="text-amber-700">${r.workersBizStop || 0} คน</strong></div>
+          <div><span class="text-slate-400 block font-sans">เดือดร้อนหยุดงาน (บ้านประสพภัย):</span><strong class="text-red-600">${r.workersImpact || 0} คน</strong></div>
+          <div><span class="text-slate-400 block font-sans">ระดับน้ำท่วม (เฉลี่ย):</span><strong>${r.waterLevelCm || 0} ซม.</strong></div>
+          <div><span class="text-slate-400 block font-sans">ประเมินความเสียหาย:</span>${damageText}</div>
+        </div>
+
+        <div class="bg-amber-50 p-2.5 rounded-xl border border-amber-200 text-amber-900 text-xs">
+          <strong>ความช่วยเหลือที่ขอรับ:</strong> ${r.reliefNeed}
+        </div>
+
+        ${photosHtml}
+      `;
+
+      const btnToggle = document.getElementById('modal-btn-toggle-status');
+      if (r.status === 'DELIVERED') {
+        btnToggle.innerText = '↺ ปรับกลับเป็น "รอดำเนินการ"';
+        btnToggle.className = 'w-full sm:w-auto bg-amber-600 hover:bg-amber-500 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition-colors cursor-pointer';
+      } else {
+        btnToggle.innerText = '✓ ปรับสถานะเป็น "ช่วยเหลือแล้ว"';
+        btnToggle.className = 'w-full sm:w-auto bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition-colors cursor-pointer';
+      }
+
+      document.getElementById('action-modal').classList.remove('hidden');
+    }
+
+    function closeActionModal() {
+      document.getElementById('action-modal').classList.add('hidden');
+      selectedActiveReportId = null;
+    }
+
+    function toggleHelpDelivered() {
+      if (!selectedActiveReportId) return;
+      const r = reports.find(item => item.id === selectedActiveReportId);
+      if (r) {
+        r.status = (r.status === 'DELIVERED' ? 'PENDING' : 'DELIVERED');
+        persistData();
+        closeActionModal();
+        renderRegistryTable();
+        updateOfficerKPIs();
+        showToast('อัปเดตสถานะสำเร็จ 🔄', `${r.companyName}: ${r.status}`);
+      }
+    }
+
+    function exportToCSV() {
+      if (reports.length === 0) {
+        showToast('ไม่มีข้อมูล ⚠️', 'ยังไม่มีรายการรายงานที่สามารถส่งออกได้');
+        return;
+      }
+      
+      const csvEscape = (val) => `"${String(val ?? '').replace(/"/g, '""')}"`;
+      
+      let csv = "\uFEFFลำดับ,รหัสรายงาน,วันที่บันทึก,รูปแบบสถานประกอบการ,ประเภทกิจการ,ชื่อทางการค้า/ชื่อร้านค้า/ชื่อโรงงาน,ชื่อบุคคลผู้เป็นเจ้าของ/ผู้แทนนิติบุคคล,เลขทะเบียนนิติบุคคล/ประกันสังคม,อำเภอ,ตำบล/จุดสังเกต,ละติจูด(Lat),ลองจิจูด(Lng),ชื่อผู้ประสานงานหน้างาน,เบอร์โทรศัพท์ติดต่อ,ลูกจ้างทั้งหมด(คน),แรงงานต่างด้าว(คน),ลูกจ้างหยุดงานเหตุสุดวิสัยสปก(คน),ลูกจ้างเดือดร้อนและหยุดงานบ้านประสพภัย(คน),สภาพการดำเนินงาน,ระดับน้ำท่วมขังเฉลี่ย(ซม.),ประเมินความเสียหาย(บาท),สิ่งที่ขอรับการสนับสนุนเร่งด่วน,สถานะการดำเนินการ,มีภาพถ่าย(ภาพ),หน่วยงานผู้รับผิดชอบ\n";
+
+      reports.forEach((r, idx) => {
+        const damageVal = r.damageIsUnassessed ? 'ยังไม่ได้ประเมิน' : (r.damageEstimate || 0);
+
+        csv += [
+          idx + 1,
+          csvEscape(r.id),
+          csvEscape(new Date(r.timestamp).toLocaleDateString('th-TH') + ' ' + new Date(r.timestamp).toLocaleTimeString('th-TH')),
+          csvEscape(r.ownerType === 'INDIVIDUAL' ? 'บุคคลธรรมดา' : 'นิติบุคคล'),
+          csvEscape(r.bizType || 'ไม่ระบุ'),
+          csvEscape(r.tradeName || r.companyName),
+          csvEscape(r.ownerName || '-'),
+          csvEscape(r.regId || '-'),
+          csvEscape(r.district),
+          csvEscape(r.subdistrict || '-'),
+          r.lat || '',
+          r.lng || '',
+          csvEscape(r.contactName),
+          csvEscape(r.contactPhone),
+          r.workersTotal || 0,
+          r.workersMigrant || 0,
+          r.workersBizStop || 0,
+          r.workersImpact || 0,
+          csvEscape(r.operationStatus),
+          r.waterLevelCm || 0,
+          csvEscape(damageVal),
+          csvEscape(r.reliefNeed),
+          csvEscape(r.status === 'DELIVERED' ? 'ช่วยเหลือแล้ว' : 'รอดำเนินการ'),
+          (r.photos && r.photos.length > 0) ? `${r.photos.length} ภาพ` : 'ไม่มีภาพ',
+          csvEscape('สำนักงานสวัสดิการและคุ้มครองแรงงาน จ.กาญจนบุรี')
+        ].join(',') + '\n';
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const today = new Date().toISOString().slice(0, 10);
+      a.download = `รายงานอุทกภัย_สสค_กาญจนบุรี_ส่งต่อกรม_${today}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      showToast('ส่งออก CSV สำเร็จ 📥', 'ดาวน์โหลดไฟล์สรุปรายงานมาตรฐานสำหรับส่งต่อกรม/จังหวัดเรียบร้อยแล้ว');
+    }
+
+    function getDynamicEmployerUrl() {
+      const currentUrl = new URL(window.location.href);
+      const cleanUrl = new URL(currentUrl.origin + currentUrl.pathname);
+      cleanUrl.searchParams.set('portal', 'employer');
+      return cleanUrl.toString();
+    }
+
+    function openQrModal() {
+      const dynamicUrl = getDynamicEmployerUrl();
+      const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(dynamicUrl)}`;
+      
+      document.getElementById('qr-image').src = qrApiUrl;
+      document.getElementById('qr-url-text').innerText = dynamicUrl;
+      document.getElementById('qr-modal').classList.remove('hidden');
+    }
+
+    function closeQrModal() {
+      document.getElementById('qr-modal').classList.add('hidden');
+    }
+
+    function copyReportUrl() {
+      const dynamicUrl = getDynamicEmployerUrl();
+      
+      const tempInput = document.createElement('textarea');
+      tempInput.value = dynamicUrl;
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      document.execCommand('copy');
+      document.body.removeChild(tempInput);
+
+      showToast('คัดลอกลิงก์สำเร็จ 📋', 'นำลิงก์ไปแชร์ในกลุ่ม LINE หรือ Facebook ให้นายจ้างแจ้งเหตุได้ทันที');
+      closeQrModal();
+    }
+
+    function showToast(title, desc) {
+      const toast = document.getElementById('toast-box');
+      document.getElementById('toast-title').innerText = title;
+      document.getElementById('toast-desc').innerText = desc;
+      toast.classList.remove('translate-y-20', 'opacity-0');
+      toast.classList.add('translate-y-0', 'opacity-100');
+      setTimeout(() => {
+        toast.classList.remove('translate-y-0', 'opacity-100');
+        toast.classList.add('translate-y-20', 'opacity-0');
+      }, 3500);
+    }
+
+    // Dynamic Device Detection & Adaptive Responsive Layout Engine
+    function detectDeviceType() {
+      const width = window.innerWidth;
+      const ua = navigator.userAgent || '';
+      const isMobileUA = /Android|iPhone|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+      const isTabletUA = /iPad|Tablet/i.test(ua);
+
+      if (width < 768 || (isMobileUA && width < 900)) {
+        return 'MOBILE';
+      } else if (width >= 768 && width < 1024 || isTabletUA) {
+        return 'TABLET';
+      } else {
+        return 'DESKTOP';
+      }
+    }
+
+    let activeDeviceMode = null;
+
+    function applyResponsiveLayout(isInitialLoad = false) {
+      const detected = detectDeviceType();
+      const badge = document.getElementById('device-mode-badge');
+
+      if (badge) {
+        if (detected === 'MOBILE') {
+          badge.innerHTML = '📱 โหมดมือถือ (Mobile)';
+          badge.className = 'inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-950/80 text-emerald-300 border border-emerald-600/40 shadow-sm';
+        } else if (detected === 'TABLET') {
+          badge.innerHTML = '📟 โหมดแท็บเล็ต (Tablet)';
+          badge.className = 'inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-950/80 text-indigo-300 border border-indigo-600/40 shadow-sm';
+        } else {
+          badge.innerHTML = '🖥️ โหมด PC/เดสก์ท็อป';
+          badge.className = 'inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-950/80 text-blue-300 border border-blue-600/40 shadow-sm';
+        }
+      }
+
+      // Initial Intelligent Routing based on viewport
+      if (isInitialLoad) {
+        const params = new URLSearchParams(window.location.search);
+        const portalParam = (params.get('portal') || '').toUpperCase();
+
+        if (portalParam === 'OFFICER' || portalParam === 'DASHBOARD') {
+          requestOfficerAccess();
+        } else if (portalParam === 'EMPLOYER') {
+          switchPortal('EMPLOYER');
+        } else {
+          // On mobile & tablets, automatically guide users to fast Employer report form
+          // On desktop, if already authenticated as officer, open command dashboard
+          if (detected === 'DESKTOP' && isOfficerAuthenticated) {
+            switchPortal('OFFICER');
+          } else {
+            switchPortal('EMPLOYER');
+          }
+        }
+      }
+
+      // Smooth recalculation of GIS Map and Canvas charts on orientation/viewport changes
+      if (gisMap) {
+        setTimeout(() => gisMap.invalidateSize(), 250);
+      }
+      if (chartDistrict) chartDistrict.resize();
+      if (chartImpact) chartImpact.resize();
+
+      activeDeviceMode = detected;
+    }
+
+    let resizeDebounce = null;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeDebounce);
+      resizeDebounce = setTimeout(() => applyResponsiveLayout(false), 150);
+    });
+
+    window.addEventListener('DOMContentLoaded', () => {
+      initData();
+      initSubdistrictDatalist();
+      applyResponsiveLayout(true);
+    });
+  </script>
+</body>
+</html>
